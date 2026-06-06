@@ -1,0 +1,61 @@
+name: sync-flake-lock
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash -xe {0}
+
+jobs:
+  sync-flake-lock:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Sync flake.lock from Obelisk
+        run: |
+          curl --fail --location \
+            https://raw.githubusercontent.com/obeli-sk/obelisk/refs/heads/latest/flake.lock \
+            --output flake.lock
+
+      - uses: nixbuild/nix-quick-install-action@v34
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          nix_conf: |
+            extra-substituters = https://cache.garnix.io
+            extra-trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g
+
+      - name: Populate the Nix store
+        run: nix develop --command echo
+
+      - name: Update dev-deps.txt
+        run: nix develop --command ./scripts/dev-deps.sh
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN_PR_RW }}
+        run: |
+          if git diff --quiet; then
+              echo "No changes to commit."
+              exit 0
+          fi
+
+          branch="sync-flake-lock-$(date +'%Y%m%d-%H%M%S')"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add flake.lock dev-deps.txt
+          git commit -m "chore: Sync \`flake.lock\` from upstream"
+          git push origin "$branch"
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "Sync \`flake.lock\` from upstream" \
+            --body ''

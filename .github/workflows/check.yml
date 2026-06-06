@@ -1,0 +1,66 @@
+name: check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash -xe {0}
+
+jobs:
+  check-dev-deps:
+    name: Check dev-deps.txt
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: nixbuild/nix-quick-install-action@v34
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          nix_conf: |
+            extra-substituters = https://cache.garnix.io
+            extra-trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g
+
+      - name: Populate the Nix store
+        run: nix develop --command echo
+
+      - name: Regenerate dev-deps.txt
+        run: nix develop --command ./scripts/dev-deps.sh
+
+      - name: Check dev-deps.txt
+        run: |
+          cat dev-deps.txt
+          if ! git diff --quiet -- dev-deps.txt; then
+              echo "dev-deps.txt is stale:"
+              git diff -- dev-deps.txt
+              exit 1
+          fi
+
+  verify-deployment:
+    name: Verify deployment
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: nixbuild/nix-quick-install-action@v34
+        with:
+          github_access_token: ${{ secrets.GITHUB_TOKEN }}
+          nix_conf: |
+            extra-substituters = https://cache.garnix.io
+            extra-trusted-public-keys = cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g
+
+      - name: Verify deployment.toml
+        run: |
+          nix develop --command obelisk server verify \
+            --deployment deployment.toml \
+            --ignore-missing-env-vars \
+            --skip-db
