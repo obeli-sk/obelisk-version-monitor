@@ -1,0 +1,3 @@
+use flake .
+
+export GH_TOKEN=$(gh auth token)

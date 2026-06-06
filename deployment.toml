@@ -1,0 +1,81 @@
+# obelisk-version-monitor — periodic workflow that records the `obelisk`
+# version pinned in `dev-deps.txt` of every public obeli-sk repo, plus a
+# webhook that displays the latest result.
+
+[[activity_js]]
+name = "list_repos"
+location = "${DEPLOYMENT_DIR}/activity/list_repos.js"
+ffqn = "obeli-sk:version-monitor/repos.list-repos"
+return_type = "result<list<string>, string>"
+[[activity_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["GET"]
+
+[[activity_js]]
+name = "fetch_dev_deps"
+location = "${DEPLOYMENT_DIR}/activity/fetch_dev_deps.js"
+ffqn = "obeli-sk:version-monitor/repos.fetch-dev-deps"
+params = [
+  { name = "repo", type = "string" },
+]
+return_type = "result<string, variant { permanent-not-found, transient-error(string), execution-failed }>"
+[[activity_js.allowed_host]]
+pattern = "https://raw.githubusercontent.com"
+methods = ["GET"]
+
+[[activity_exec]]
+name = "run_sync_flake_lock"
+location = "${DEPLOYMENT_DIR}/activity/run_sync_flake_lock.sh"
+ffqn = "obeli-sk:version-monitor/github.run-sync-flake-lock"
+params = [
+  { name = "repo", type = "string" },
+]
+return_type = "result<string, string>"
+exec.lock_expiry.seconds = 30
+max_retries = 0
+env_vars = ["PATH", "GH_TOKEN"]
+
+[[activity_exec]]
+name = "merge_pull_request"
+location = "${DEPLOYMENT_DIR}/activity/merge_pull_request.sh"
+ffqn = "obeli-sk:version-monitor/github.merge-pull-request"
+params = [
+  { name = "repo", type = "string" },
+  { name = "number", type = "u64" },
+  { name = "head-sha", type = "string" },
+]
+return_type = "result<string, string>"
+exec.lock_expiry.seconds = 30
+max_retries = 0
+env_vars = ["PATH", "GH_TOKEN"]
+
+[[workflow_js]]
+name = "monitor"
+location = "${DEPLOYMENT_DIR}/workflow/monitor.js"
+ffqn = "obeli-sk:version-monitor/monitor.run"
+return_type = "result<list<tuple<string, string>>, string>"
+
+[[webhook_endpoint_js]]
+name = "show"
+location = "${DEPLOYMENT_DIR}/webhook/show.js"
+routes = [
+  { methods = ["GET"], route = "/" },
+  { methods = ["GET"], route = "/api/status" },
+  { methods = ["GET"], route = "/bump/:repo" },
+  { methods = ["POST"], route = "/merge/:repo/:number" },
+]
+env_vars = [
+  { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },
+  "GH_TOKEN",
+]
+[[webhook_endpoint_js.allowed_host]]
+pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
+methods = ["GET"]
+[[webhook_endpoint_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["GET"]
+
+[[cron]]
+name = "monitor_run"
+ffqn = "obeli-sk:version-monitor/monitor.run"
+schedule = "* * * * *" # every minute
