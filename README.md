@@ -51,20 +51,11 @@ obelisk server verify \
   --skip-db
 ```
 
-Apply it to a running local server:
-
+Run it
 ```sh
-obelisk deployment apply deployment.toml
+obelisk server run --deployment deployment.toml
 ```
 
 With the default server configuration, the dashboard is available at
 <http://127.0.0.1:9090/>.
 
-## Automation
-
-- `check.yml` regenerates `dev-deps.txt` and fails if it is stale.
-- `sync-flake-lock.yml` copies `flake.lock` from Obelisk's `latest` branch,
-  regenerates `dev-deps.txt`, and opens a pull request.
-
-The sync workflow requires the repository secret `GH_TOKEN_PR_RW` with
-permission to push a branch and open a pull request.
