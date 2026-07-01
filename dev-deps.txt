@@ -1,1 +1,1 @@
-obelisk 0.39.3
+obelisk 0.39.4
