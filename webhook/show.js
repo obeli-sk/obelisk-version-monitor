@@ -502,6 +502,13 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+const WEBUI_BASE = "http://localhost:8080";
+
+function executionLink(id) {
+  return '<a href="' + WEBUI_BASE + "/execution/" + encodeURIComponent(id)
+    + '" target="_blank" rel="noopener"><code>' + escapeHtml(id) + "</code></a>";
+}
+
 function renderNotice() {
   const params = new URLSearchParams(location.search);
   const submitted = params.get("submitted");
@@ -533,7 +540,7 @@ function renderExecution(execution) {
   const status = execution.run_url
     ? "<a" + className + ' href="' + escapeHtml(execution.run_url) + '">' + escapeHtml(label) + "</a>"
     : "<span" + className + ">" + escapeHtml(label) + "</span>";
-  return status + "<br><small><code>" + escapeHtml(execution.execution_id) + "</code></small>";
+  return status + "<br><small>" + executionLink(execution.execution_id) + "</small>";
 }
 
 function renderMergeExecution(execution) {
@@ -543,7 +550,7 @@ function renderMergeExecution(execution) {
     : execution.status.replaceAll("_", " ");
   const className = execution.status === "finished" ? "" : ' class="in-progress"';
   return '<br>merge <span' + className + ">" + escapeHtml(label)
-    + "</span><br><small><code>" + escapeHtml(execution.execution_id) + "</code></small>";
+    + "</span><br><small>" + executionLink(execution.execution_id) + "</small>";
 }
 
 function renderPullRequest(row) {
@@ -572,8 +579,8 @@ function renderStatus(status) {
   if (status.message) {
     meta.innerHTML = "<p>" + escapeHtml(status.message) + "</p>";
   } else {
-    meta.innerHTML = "<p>Latest run: <code>"
-      + escapeHtml(status.latest_run.execution_id) + "</code> · created <code>"
+    meta.innerHTML = "<p>Latest run: "
+      + executionLink(status.latest_run.execution_id) + " · created <code>"
       + escapeHtml(status.latest_run.created_at) + "</code></p>";
   }
   if (!status.rows || status.rows.length === 0) {
