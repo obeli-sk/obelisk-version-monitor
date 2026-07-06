@@ -526,6 +526,13 @@ function renderStatus(status) {
     + rows + "</tbody></table>";
 }
 
+// Navigating away (e.g. submitting the Merge form or following the bump link)
+// aborts the in-flight /api/status fetch, which would otherwise flash a bogus
+// "Failed to refresh" error before the next page loads.
+let navigatingAway = false;
+addEventListener("pagehide", function() { navigatingAway = true; });
+addEventListener("beforeunload", function() { navigatingAway = true; });
+
 async function refresh() {
   try {
     const response = await fetch("/api/status", { headers: { accept: "application/json" } });
@@ -533,6 +540,7 @@ async function refresh() {
     if (!response.ok || status.error) throw new Error(status.error || "HTTP " + response.status);
     renderStatus(status);
   } catch (error) {
+    if (navigatingAway) return;
     meta.innerHTML = '<p class="err">Failed to refresh: ' + escapeHtml(error) + "</p>";
   }
 }
