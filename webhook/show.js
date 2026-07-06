@@ -304,47 +304,6 @@ function pullRequestForJson(pull) {
     };
 }
 
-function renderTable(pairs, executionByRepo, mergeByRepo, prByRepo) {
-    if (!Array.isArray(pairs) || pairs.length === 0) {
-        return "<p>No repositories with an obelisk version line.</p>";
-    }
-    const rows = pairs
-        .map(([repo, version]) => {
-            const execution = executionByRepo.get(repo);
-            const pull = prByRepo.get(repo);
-            return `<tr><td><a href="https://github.com/obeli-sk/${escapeHtml(repo)}">${escapeHtml(repo)}</a></td><td><code>${escapeHtml(version)}</code></td><td><a href="/bump/${encodeURIComponent(repo)}">Run sync-flake-lock</a></td><td>${renderExecution(execution)}</td><td>${renderPullRequest(repo, pull, mergeByRepo.get(repo))}</td></tr>`;
-        })
-        .join("");
-    return `<table><thead><tr><th>Repository</th><th>obelisk version</th><th>Action</th><th>GH Action</th><th>PR</th></tr></thead><tbody>${rows}</tbody></table>`;
-}
-
-function renderExecution(execution) {
-    if (!execution) {
-        return "Not run";
-    }
-    const state = execution.pending_state || {};
-    const status = state.status || "unknown";
-    const label = status === "finished"
-        ? `finished: ${formatResultKind(state.result_kind)}`
-        : status.replaceAll("_", " ");
-    const cssClass = status === "finished" ? "" : ' class="in-progress"';
-    const runLabel = formatGitHubRun(execution.github_run) || label;
-    const statusHtml = execution.run_url
-        ? `<a${execution.github_run?.status !== "completed" ? ' class="in-progress"' : ""} href="${escapeHtml(execution.run_url)}">${escapeHtml(runLabel)}</a>`
-        : `<span${cssClass}>${escapeHtml(label)}</span>`;
-    return `${statusHtml}<br><small><code>${escapeHtml(execution.execution_id)}</code></small>`;
-}
-
-function formatGitHubRun(run) {
-    if (!run?.status) {
-        return null;
-    }
-    if (run.status === "completed") {
-        return `GH: completed: ${run.conclusion || "unknown"}`;
-    }
-    return `GH: ${String(run.status).replaceAll("_", " ")}`;
-}
-
 function formatResultKind(resultKind) {
     if (typeof resultKind === "string") {
         return resultKind;
@@ -353,38 +312,6 @@ function formatResultKind(resultKind) {
         return `error: ${String(resultKind.err.execution_failure).replaceAll("_", " ")}`;
     }
     return resultKind ? JSON.stringify(resultKind) : "unknown";
-}
-
-function renderPullRequest(repo, pull, mergeExecution) {
-    if (pull === undefined) {
-        return "Unknown";
-    }
-    if (pull === null) {
-        return "Not found";
-    }
-    if (pull.error) {
-        return `<span class="err">${escapeHtml(pull.error)}</span>`;
-    }
-    const state = pull.merged_at || pull.pull_request?.merged_at ? "merged" : pull.state;
-    const checks = state === "open" && pull.checks_state
-        ? ` · <span class="${pull.checks_state === "in progress" ? "in-progress" : pull.checks_state === "erroring" ? "err" : ""}">checks: ${escapeHtml(pull.checks_state)}</span>`
-        : "";
-    const merge = state === "open" && pull.checks_state === "passing" && pull.head_sha
-        ? ` · <form class="inline" method="post" action="/merge/${encodeURIComponent(repo)}/${pull.number}?head=${encodeURIComponent(pull.head_sha)}"><button type="submit">Merge</button></form>`
-        : "";
-    const mergeStatus = mergeExecution
-        ? `<br>merge ${renderExecutionStatus(mergeExecution)}<br><small><code>${escapeHtml(mergeExecution.execution_id)}</code></small>`
-        : "";
-    return `<a href="${escapeHtml(pull.html_url)}">#${escapeHtml(pull.number)}</a> ${escapeHtml(state)}${checks}${merge}${mergeStatus}`;
-}
-
-function renderExecutionStatus(execution) {
-    const state = execution.pending_state || {};
-    const status = state.status || "unknown";
-    const label = status === "finished"
-        ? formatResultKind(state.result_kind)
-        : status.replaceAll("_", " ");
-    return `<span${status === "finished" ? "" : ' class="in-progress"'}>${escapeHtml(label)}</span>`;
 }
 
 function runBump(encodedRepo) {
