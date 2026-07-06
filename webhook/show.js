@@ -465,7 +465,7 @@ function renderExecution(execution) {
     }
   }
   const status = execution.run_url
-    ? "<a" + className + ' href="' + escapeHtml(execution.run_url) + '">' + escapeHtml(label) + "</a>"
+    ? "<a" + className + ' target="_blank" rel="noopener" href="' + escapeHtml(execution.run_url) + '">' + escapeHtml(label) + "</a>"
     : "<span" + className + ">" + escapeHtml(label) + "</span>";
   return status + "<br><small>" + executionLink(execution.execution_id) + "</small>";
 }
