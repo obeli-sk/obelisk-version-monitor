@@ -484,7 +484,7 @@ function renderPullRequest(row) {
   const pull = row.pull_request;
   if (pull === null) return "Not found";
   if (pull.error) return '<span class="err">' + escapeHtml(pull.error) + "</span>";
-  let html = '<a href="' + escapeHtml(pull.html_url) + '">#'
+  let html = '<a target="_blank" rel="noopener" href="' + escapeHtml(pull.html_url) + '">#'
     + escapeHtml(pull.number) + "</a> " + escapeHtml(pull.state);
   if (pull.state === "open" && pull.checks_state) {
     const className = pull.checks_state === "in progress"
