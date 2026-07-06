@@ -18,11 +18,7 @@ The dashboard can:
 The dashboard is served by the `show` webhook endpoint. It polls JSON status
 without reloading the page.
 
-| Repository | obelisk version | Action | GH Action | PR |
-| --- | --- | --- | --- | --- |
-| benchmark-fibo | `0.38.3` | Run sync-flake-lock | GH: completed: success | #62 open, checks: passing, Merge |
-| components | `0.38.2` | Run sync-flake-lock | GH: in progress | #96 open, checks: in progress |
-| webui | `0.38.2` | Run sync-flake-lock | GH: completed: success | #86 merged |
+![Version monitor dashboard](docs/dashboard.png)
 
 Each Obelisk activity displays its execution ID. GitHub Actions runs and pull
 requests link to GitHub.
