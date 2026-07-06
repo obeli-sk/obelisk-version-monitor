@@ -515,7 +515,7 @@ function renderStatus(status) {
     return;
   }
   const rows = status.rows.map(function(row) {
-    return '<tr><td><a href="https://github.com/obeli-sk/' + encodeURIComponent(row.repo) + '">'
+    return '<tr><td><a target="_blank" rel="noopener" href="https://github.com/obeli-sk/' + encodeURIComponent(row.repo) + '">'
       + escapeHtml(row.repo) + "</a></td><td><code>" + escapeHtml(row.version)
       + '</code></td><td><a href="/bump/' + encodeURIComponent(row.repo)
       + '">Run sync-flake-lock</a></td><td>' + renderExecution(row.action_execution)
