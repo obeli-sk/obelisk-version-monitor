@@ -1,25 +1,23 @@
 // Captures a screenshot of the version-monitor dashboard for the README.
 //
-// Usage (from the website repo's screenshots devshell, which provides node +
-// playwright-core + a bundled chromium):
-//   nix develop /workspace/website#screenshots -c \
+// Usage:
+//   nix develop .#screenshots -c \
 //     node scripts/screenshot-dashboard.js [url] [output.png]
 //
 // Defaults: http://localhost:9090/  ->  docs/dashboard.png
 
+const fs = require('node:fs');
 const path = require('node:path');
 
-const PLAYWRIGHT_CORE = '/nix/store/1i3ahl6fk8llj3f0qnpzmi6rvks5fxdi-playwright-test-1.59.1/lib/node_modules/playwright-core/index.js';
-const CHROMIUM = '/nix/store/583gxir41b9qdsbggwcv33zmrgkk0cvi-playwright-chromium/chrome-linux64/chrome';
-
-const { chromium } = require(PLAYWRIGHT_CORE);
+const { chromium } = require('playwright-core');
 
 const url = process.argv[2] || 'http://localhost:9090/';
 const output = process.argv[3] || path.join(__dirname, '..', 'docs', 'dashboard.png');
 
 (async () => {
+  fs.mkdirSync(path.dirname(output), { recursive: true });
+
   const browser = await chromium.launch({
-    executablePath: CHROMIUM,
     headless: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-setuid-sandbox', '--disable-gpu'],
   });
