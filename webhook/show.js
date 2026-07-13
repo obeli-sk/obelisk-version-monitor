@@ -26,10 +26,23 @@ export default async function handle(request) {
     return dashboardPage();
 }
 
-async function collectDashboardStatus() {
+async function fetchObelisk(urlSuffix) {
     const apiBase = process.env["OBELISK_API_URL"] || "http://127.0.0.1:5005";
-    const listUrl = `${apiBase}/v1/executions?ffqn_prefix=${encodeURIComponent(WORKFLOW_FFQN)}&length=50`;
-    const listResp = await fetch(listUrl, { headers: { "accept": "application/json" } });
+    const url = `${apiBase}${urlSuffix}`;
+    const token = process.env['OBELISK__API__TOKEN'];
+    if (!token) {
+        throw new Error("OBELISK__API__TOKEN is required");
+    }
+    const headers = {
+        "accept": "application/json",
+        authorization: `bearer ${token}`,
+    };
+    return await fetch(url, { headers });
+}
+
+async function collectDashboardStatus() {
+    const listUrlSuffix = `/v1/executions?ffqn_prefix=${encodeURIComponent(WORKFLOW_FFQN)}&length=50`;
+    const listResp = await fetchObelisk(listUrlSuffix);
     if (!listResp.ok) {
         throw new Error(`Failed to list executions: HTTP ${listResp.status}`);
     }
@@ -49,8 +62,8 @@ async function collectDashboardStatus() {
     }
 
     const execId = latestFinished.execution_id;
-    const retUrl = `${apiBase}/v1/executions/${encodeURIComponent(execId)}`;
-    const retResp = await fetch(retUrl, { headers: { "accept": "application/json" } });
+    const retUrlSuffix = `/v1/executions/${encodeURIComponent(execId)}`;
+    const retResp = await fetchObelisk(retUrlSuffix);
     if (!retResp.ok) {
         throw new Error(`Failed to fetch execution ${execId}: HTTP ${retResp.status}`);
     }
@@ -63,8 +76,8 @@ async function collectDashboardStatus() {
 
     const pairs = retVal.ok || [];
     const [executionByRepo, mergeByRepo, prByRepo] = await Promise.all([
-        fetchBumpExecutions(apiBase),
-        fetchLatestExecutionsByRepo(apiBase, MERGE_FFQN),
+        fetchBumpExecutions(),
+        fetchLatestExecutionsByRepo(MERGE_FFQN),
         fetchPullRequests(pairs.map(([repo]) => repo)),
     ]);
     return {
@@ -82,9 +95,9 @@ async function collectDashboardStatus() {
     };
 }
 
-async function fetchBumpExecutions(apiBase) {
-    const listUrl = `${apiBase}/v1/executions?ffqn_prefix=${encodeURIComponent(BUMP_FFQN)}&show_derived=true&length=100`;
-    const resp = await fetch(listUrl, { headers: { "accept": "application/json" } });
+async function fetchBumpExecutions() {
+    const listUrlSuffix = `/v1/executions?ffqn_prefix=${encodeURIComponent(BUMP_FFQN)}&show_derived=true&length=100`;
+    const resp = await fetchObelisk(listUrlSuffix);
     if (!resp.ok) {
         console.warn("Failed to list bump executions:", resp.status);
         return new Map();
@@ -92,8 +105,8 @@ async function fetchBumpExecutions(apiBase) {
 
     const executions = await resp.json();
     const entries = await Promise.all(executions.map(async (execution) => {
-        const eventsUrl = `${apiBase}/v1/executions/${encodeURIComponent(execution.execution_id)}/events?version=0&including_cursor=true&length=1`;
-        const eventsResp = await fetch(eventsUrl, { headers: { "accept": "application/json" } });
+        const eventsUrlSuffix = `/v1/executions/${encodeURIComponent(execution.execution_id)}/events?version=0&including_cursor=true&length=1`;
+        const eventsResp = await fetchObelisk(eventsUrlSuffix);
         if (!eventsResp.ok) {
             return null;
         }
@@ -114,8 +127,8 @@ async function fetchBumpExecutions(apiBase) {
             || execution.pending_state?.result_kind !== "ok") {
             return;
         }
-        const resultUrl = `${apiBase}/v1/executions/${encodeURIComponent(execution.execution_id)}`;
-        const resultResp = await fetch(resultUrl, { headers: { "accept": "application/json" } });
+        const resultUrlSuffix = `/v1/executions/${encodeURIComponent(execution.execution_id)}`;
+        const resultResp = await fetchObelisk(resultUrlSuffix);
         if (!resultResp.ok) {
             return;
         }
@@ -129,9 +142,9 @@ async function fetchBumpExecutions(apiBase) {
     return byRepo;
 }
 
-async function fetchLatestExecutionsByRepo(apiBase, ffqn) {
-    const listUrl = `${apiBase}/v1/executions?ffqn_prefix=${encodeURIComponent(ffqn)}&show_derived=true&length=100`;
-    const resp = await fetch(listUrl, { headers: { "accept": "application/json" } });
+async function fetchLatestExecutionsByRepo(ffqn) {
+    const listUrlSuffix = `/v1/executions?ffqn_prefix=${encodeURIComponent(ffqn)}&show_derived=true&length=100`;
+    const resp = await fetchObelisk(listUrlSuffix);
     if (!resp.ok) {
         console.warn("Failed to list executions:", ffqn, resp.status);
         return new Map();
@@ -139,8 +152,8 @@ async function fetchLatestExecutionsByRepo(apiBase, ffqn) {
 
     const executions = await resp.json();
     const entries = await Promise.all(executions.map(async (execution) => {
-        const eventsUrl = `${apiBase}/v1/executions/${encodeURIComponent(execution.execution_id)}/events?version=0&including_cursor=true&length=1`;
-        const eventsResp = await fetch(eventsUrl, { headers: { "accept": "application/json" } });
+        const eventsUrlSuffix = `/v1/executions/${encodeURIComponent(execution.execution_id)}/events?version=0&including_cursor=true&length=1`;
+        const eventsResp = await fetchObelisk(eventsUrlSuffix);
         if (!eventsResp.ok) {
             return null;
         }

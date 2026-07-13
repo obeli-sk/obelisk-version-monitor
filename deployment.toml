@@ -70,6 +70,9 @@ env_vars = [
 [[webhook_endpoint_js.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
 methods = ["GET"]
+[webhook_endpoint_js.allowed_host.secrets]
+env_vars = ["OBELISK__API__TOKEN"]
+replace_in = ["headers"]
 [[webhook_endpoint_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]

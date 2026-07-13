@@ -25,6 +25,7 @@
             obelisk.packages.${system}.default
             gh
             just
+            jq
           ];
         };
         devShells.screenshots = pkgs.mkShell {
