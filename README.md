@@ -49,7 +49,7 @@ obelisk server verify \
 
 Run it
 ```sh
-obelisk server run --deployment deployment.toml
+obelisk server run --server-config server.toml --deployment deployment.toml
 ```
 
 With the default server configuration, the dashboard is available at

@@ -21,9 +21,10 @@
         };
       in {
         devShells.default = pkgs.mkShell {
-          packages = [
+          packages = with pkgs; [
             obelisk.packages.${system}.default
-            pkgs.gh
+            gh
+            just
           ];
         };
         devShells.screenshots = pkgs.mkShell {

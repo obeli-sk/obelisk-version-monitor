@@ -1,0 +1,4 @@
+allow_exec_activities = [
+  "sha256:18cf86a56dc5a11a019554910ed461a803a6090f9f615069c3ad7f14bd720ec8", # run_sync_flake_lock (obeli-sk:version-monitor/github.run-sync-flake-lock)
+  "sha256:82b946151edb51e7504934120b638eb387cee33a2ba66247f8d472cb37fd3eec", # merge_pull_request (obeli-sk:version-monitor/github.merge-pull-request)
+]
