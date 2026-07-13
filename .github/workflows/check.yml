@@ -62,5 +62,5 @@ jobs:
         run: |
           nix develop --command obelisk server verify \
             --deployment deployment.toml \
-            --ignore-missing-env-vars \
+            --allow-unavailable-runtime-config \
             --skip-db
