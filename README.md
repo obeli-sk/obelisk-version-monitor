@@ -43,7 +43,7 @@ Verify the deployment:
 ```sh
 obelisk server verify \
   --deployment deployment.toml \
-  --ignore-missing-env-vars \
+  --allow-unavailable-runtime-config \
   --skip-db
 ```
 
@@ -54,4 +54,3 @@ obelisk server run --deployment deployment.toml
 
 With the default server configuration, the dashboard is available at
 <http://127.0.0.1:9090/>.
-
