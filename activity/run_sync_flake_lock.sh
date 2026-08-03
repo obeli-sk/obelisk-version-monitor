@@ -21,6 +21,11 @@ fail() {
     exit 1
 }
 
+if ! GH_TOKEN=$(jq -er '.secrets.GH_TOKEN' /dev/stdin); then
+    fail "GH_TOKEN secret is unavailable"
+fi
+export GH_TOKEN
+
 repo_json=$1
 if [[ ! "$repo_json" =~ ^\"[A-Za-z0-9._-]+\"$ ]]; then
     fail "invalid repository name"

@@ -20,6 +20,11 @@ fail() {
     exit 1
 }
 
+if ! GH_TOKEN=$(jq -er '.secrets.GH_TOKEN' /dev/stdin); then
+    fail "GH_TOKEN secret is unavailable"
+fi
+export GH_TOKEN
+
 repo_json=$1
 number_json=$2
 head_sha_json=$3

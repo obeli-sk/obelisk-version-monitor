@@ -60,7 +60,7 @@ jobs:
 
       - name: Verify deployment.toml
         run: |
-          nix develop --command obelisk server verify \
+          nix develop --command obelisk deployment verify \
+            --server-config server.toml \
             --deployment deployment.toml \
-            --allow-unavailable-runtime-config \
-            --skip-db
+            --allow-unavailable-runtime-config

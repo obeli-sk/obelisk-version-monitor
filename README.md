@@ -41,15 +41,15 @@ export GH_TOKEN="$(gh auth token)"
 Verify the deployment:
 
 ```sh
-obelisk server verify \
+obelisk deployment verify \
+  --server-config server.toml \
   --deployment deployment.toml \
-  --allow-unavailable-runtime-config \
-  --skip-db
+  --allow-unavailable-runtime-config
 ```
 
 Run it
 ```sh
-export OBELISK__API__TOKEN=$(obelisk generate token --json | jq -r .token)
+export OBELISK__API__TOKEN=$(obelisk generate token)
 obelisk server run --server-config server.toml --deployment deployment.toml
 ```
 

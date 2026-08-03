@@ -33,7 +33,8 @@ params = [
 return_type = "result<string, string>"
 exec.lock_expiry.seconds = 30
 max_retries = 0
-env_vars = ["PATH", "GH_TOKEN"]
+env_vars = ["PATH"]
+secrets = ["GH_TOKEN"]
 
 [[activity_exec]]
 name = "merge_pull_request"
@@ -47,7 +48,8 @@ params = [
 return_type = "result<string, string>"
 exec.lock_expiry.seconds = 30
 max_retries = 0
-env_vars = ["PATH", "GH_TOKEN"]
+env_vars = ["PATH"]
+secrets = ["GH_TOKEN"]
 
 [[workflow_js]]
 name = "monitor"
@@ -70,14 +72,12 @@ env_vars = [
 [[webhook_endpoint_js.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
 methods = ["GET"]
-[webhook_endpoint_js.allowed_host.secrets]
-env_vars = ["OBELISK__API__TOKEN"]
+secrets = ["OBELISK__API__TOKEN"]
 replace_in = ["headers"]
 [[webhook_endpoint_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]
-[webhook_endpoint_js.allowed_host.secrets]
-env_vars = ["GH_TOKEN"]
+secrets = ["GH_TOKEN"]
 replace_in = ["headers"]
 
 [[cron]]

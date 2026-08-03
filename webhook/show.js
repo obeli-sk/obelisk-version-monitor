@@ -71,7 +71,7 @@ async function collectDashboardStatus() {
     if (!("ok" in retVal)) {
         throw new Error("err" in retVal
             ? `Workflow failed: ${String(retVal.err)}`
-            : `Execution error: ${JSON.stringify(retVal.execution_error)}`);
+            : `Execution error: ${JSON.stringify(retVal.execution_failed)}`);
     }
 
     const pairs = retVal.ok || [];
