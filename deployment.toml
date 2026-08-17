@@ -69,11 +69,67 @@ methods = ["PUT"]
 secrets = ["GH_TOKEN"]
 replace_in = ["headers"]
 
+[[activity_js]]
+name = "check_repo_active"
+location = "${DEPLOYMENT_DIR}/activity/check_repo_active.js"
+ffqn = "obeli-sk:version-monitor/repos.check-active"
+params = [
+  { name = "repo", type = "string" },
+]
+return_type = "result<bool, string>"
+[[activity_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["GET"]
+secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
+
 [[workflow_js]]
 name = "monitor"
 location = "${DEPLOYMENT_DIR}/workflow/monitor.js"
 ffqn = "obeli-sk:version-monitor/monitor.run"
 return_type = "result<list<record { repo: string, version: string, pull-request: option<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }> }>, string>"
+
+# Per-repo workflow prototype (runs alongside the monitor cron; the dashboard
+# does not read it yet). The supervisor boots once and spawns one repo-monitor
+# workflow per repo; each repo-monitor owns its own state and action mailbox.
+[[workflow_js]]
+name = "supervisor"
+location = "${DEPLOYMENT_DIR}/workflow/supervisor.js"
+ffqn = "obeli-sk:version-monitor/supervisor.run"
+return_type = "result<string, string>"
+
+[[workflow_js]]
+name = "repo_monitor"
+location = "${DEPLOYMENT_DIR}/workflow/repo_monitor.js"
+ffqn = "obeli-sk:version-monitor/repo-monitor.run"
+params = [
+  { name = "repo", type = "string" },
+]
+return_type = "result<string, string>"
+
+# Self-published state notification per repo-monitor cycle.
+[[activity_stub]]
+name = "repo_monitor_state"
+ffqn = "obeli-sk:version-monitor/repo-monitor.state"
+params = [
+  { name = "event-id", type = "string" },
+]
+return_type = "result<string, string>"
+
+# Action mailbox: the UI fulfils the pending offer to deliver run-gha / merge.
+[[activity_stub]]
+name = "repo_monitor_action"
+ffqn = "obeli-sk:version-monitor/repo-monitor.action"
+return_type = "result<string, string>"
+
+# Self-published repo -> execution-id directory per supervisor cycle.
+[[activity_stub]]
+name = "supervisor_directory"
+ffqn = "obeli-sk:version-monitor/supervisor.directory"
+params = [
+  { name = "event-id", type = "string" },
+]
+return_type = "result<string, string>"
 
 [[webhook_endpoint_js]]
 name = "show"
@@ -102,3 +158,8 @@ replace_in = ["headers"]
 name = "monitor_run"
 ffqn = "obeli-sk:version-monitor/monitor.run"
 schedule = "* * * * *" # every minute
+
+[[cron]]
+name = "supervisor_boot"
+ffqn = "obeli-sk:version-monitor/supervisor.run"
+schedule = "@once"
