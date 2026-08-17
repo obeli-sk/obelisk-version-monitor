@@ -1,7 +1,3 @@
-[allow_exec_activities]
-merge_pull_request = "sha256:00768bed3b94361154663d0add3f77c66f7ed7f96faeab15274d2c0d9781c94d"
-run_sync_flake_lock = "sha256:ccce5dbb094ee9d7a24f2a32ee5397d5e0cee6acec44709ae413c26f50e3918c"
-
 [secrets]
 GH_TOKEN = { env = "GH_TOKEN" }
 OBELISK__API__TOKEN = { env = "OBELISK__API__TOKEN" }
@@ -22,6 +18,6 @@ replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
 pattern = "https://api.github.com"
-methods = ["GET"]
+methods = ["GET", "POST", "PUT"]
 secrets = ["GH_TOKEN"]
 replace_in = ["headers"]

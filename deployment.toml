@@ -37,22 +37,24 @@ methods = ["GET"]
 secrets = ["GH_TOKEN"]
 replace_in = ["headers"]
 
-[[activity_exec]]
+[[activity_js]]
 name = "run_sync_flake_lock"
-location = "${DEPLOYMENT_DIR}/activity/run_sync_flake_lock.sh"
+location = "${DEPLOYMENT_DIR}/activity/run_sync_flake_lock.js"
 ffqn = "obeli-sk:version-monitor/github.run-sync-flake-lock"
 params = [
   { name = "repo", type = "string" },
 ]
 return_type = "result<string, string>"
-exec.lock_expiry.seconds = 30
 max_retries = 0
-env_vars = ["PATH"]
+[[activity_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["GET", "POST"]
 secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
 
-[[activity_exec]]
+[[activity_js]]
 name = "merge_pull_request"
-location = "${DEPLOYMENT_DIR}/activity/merge_pull_request.sh"
+location = "${DEPLOYMENT_DIR}/activity/merge_pull_request.js"
 ffqn = "obeli-sk:version-monitor/github.merge-pull-request"
 params = [
   { name = "repo", type = "string" },
@@ -60,10 +62,12 @@ params = [
   { name = "head-sha", type = "string" },
 ]
 return_type = "result<string, string>"
-exec.lock_expiry.seconds = 30
 max_retries = 0
-env_vars = ["PATH"]
+[[activity_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["PUT"]
 secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
 
 [[workflow_js]]
 name = "monitor"
