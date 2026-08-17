@@ -93,25 +93,43 @@ methods = ["GET"]
 secrets = ["GH_TOKEN"]
 replace_in = ["headers"]
 
+[[activity_js]]
+name = "reconcile_monitors"
+location = "${DEPLOYMENT_DIR}/activity/reconcile_monitors.js"
+ffqn = "obeli-sk:version-monitor/repos.reconcile-monitors"
+params = [
+  { name = "current-execution-id", type = "string" },
+]
+return_type = "result<string, string>"
+max_retries = 0
+exec.lock_expiry.seconds = 30
+env_vars = [
+  { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },
+]
+[[activity_js.allowed_host]]
+pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
+methods = ["GET", "PUT"]
+secrets = ["OBELISK__API__TOKEN"]
+replace_in = ["headers"]
+
 [[workflow_js]]
 name = "monitor"
 location = "${DEPLOYMENT_DIR}/workflow/monitor.js"
 ffqn = "obeli-sk:version-monitor/monitor.run"
 return_type = "result<list<record { repo: string, version: string, pull-request: option<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }> }>, string>"
 
-# Per-repo workflow prototype (runs alongside the monitor cron; the dashboard
-# does not read it yet). The supervisor boots once and spawns one repo-monitor
-# workflow per repo; each repo-monitor owns its own state and action mailbox.
+# A finite reconciler runs every minute, retires prior deployment generations,
+# and ensures one current repo monitor exists for each repository.
 [[workflow_js]]
 name = "supervisor"
 location = "${DEPLOYMENT_DIR}/workflow/supervisor.js"
-ffqn = "obeli-sk:version-monitor/supervisor.run"
+ffqn = "obeli-sk:version-monitor/supervisor.reconcile"
 return_type = "result<string, string>"
 
 [[workflow_js]]
 name = "repo_monitor"
 location = "${DEPLOYMENT_DIR}/workflow/repo_monitor.js"
-ffqn = "obeli-sk:version-monitor/repo-monitor.run"
+ffqn = "obeli-sk:version-monitor/repo-monitor.run-cancellable"
 params = [
   { name = "repo", type = "string" },
 ]
@@ -128,15 +146,6 @@ wit = "wit/repo-monitor-state"
 name = "repo_monitor_action"
 ffqn = "obeli-sk:version-monitor/repo-monitor-action.action"
 wit = "wit/repo-monitor-action"
-
-# Self-published repo -> execution-id directory per supervisor cycle.
-[[activity_stub]]
-name = "supervisor_directory"
-ffqn = "obeli-sk:version-monitor/supervisor.directory"
-params = [
-  { name = "event-id", type = "string" },
-]
-return_type = "result<string, string>"
 
 [[webhook_endpoint_js]]
 name = "show"
@@ -167,6 +176,6 @@ ffqn = "obeli-sk:version-monitor/monitor.run"
 schedule = "* * * * *" # every minute
 
 [[cron]]
-name = "supervisor_boot"
-ffqn = "obeli-sk:version-monitor/supervisor.run"
-schedule = "@once"
+name = "supervisor_reconcile"
+ffqn = "obeli-sk:version-monitor/supervisor.reconcile"
+schedule = "* * * * *" # every minute

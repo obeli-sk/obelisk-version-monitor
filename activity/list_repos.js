@@ -29,7 +29,9 @@ export default async function list_repos() {
             break;
         }
         for (const r of batch) {
-            repos.push(r.name);
+            if (r.archived !== true) {
+                repos.push(r.name);
+            }
         }
         if (batch.length < 100) {
             break;

@@ -14,7 +14,7 @@ replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
-methods = ["GET"]
+methods = ["GET", "PUT"]
 secrets = ["OBELISK__API__TOKEN"]
 replace_in = ["headers"]
 

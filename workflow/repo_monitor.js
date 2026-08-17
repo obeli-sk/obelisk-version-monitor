@@ -1,4 +1,4 @@
-// obeli-sk:version-monitor/repo-monitor.run: func(repo: string) -> result<string, string>
+// obeli-sk:version-monitor/repo-monitor.run-cancellable: func(repo: string) -> result<string, string>
 //
 // One long-running workflow per repo. Each cycle it refreshes the repo's
 // obelisk version and sync-flake-lock PR state, self-publishes that snapshot on

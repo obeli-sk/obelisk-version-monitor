@@ -4,7 +4,7 @@
 // `obeli-sk:version-monitor/monitor.run`, fetches its return value, and
 // renders the resulting `[repo, version]` pairs as an HTML table.
 const WORKFLOW_FFQN = "obeli-sk:version-monitor/monitor.run";
-const REPO_MONITOR_FFQN = "obeli-sk:version-monitor/repo-monitor.run";
+const REPO_MONITOR_FFQN = "obeli-sk:version-monitor/repo-monitor.run-cancellable";
 const BUMP_FFQN = "obeli-sk:version-monitor/github.run-sync-flake-lock";
 const MERGE_FFQN = "obeli-sk:version-monitor/github.merge-pull-request";
 const PR_TITLE = "Sync `flake.lock` from upstream";
