@@ -17,17 +17,22 @@
 // Throwing a snake_case string selects a no-payload variant case; throwing
 // `{ case_name: payload }` selects a case with payload.
 export default async function fetch_dev_deps(repo) {
+    const token = process.env["GH_TOKEN"];
+    if (!token) {
+        throw { transient_error: "GH_TOKEN secret is unavailable" };
+    }
+    const headers = {
+        authorization: `Bearer ${token}`,
+        "cache-control": "no-cache",
+        "user-agent": "obelisk-version-monitor",
+    };
+
     // Try `main` first, then fall back to `master`.
     const branches = ["main", "master"];
     for (const branch of branches) {
         const url = `https://raw.githubusercontent.com/obeli-sk/${repo}/${branch}/dev-deps.txt?cache-bust=${Date.now()}`;
         console.info("Fetching", url);
-        const resp = await fetch(url, {
-            headers: {
-                "cache-control": "no-cache",
-                "user-agent": "obelisk-version-monitor",
-            },
-        });
+        const resp = await fetch(url, { headers });
         if (resp.ok) {
             return await resp.text();
         }

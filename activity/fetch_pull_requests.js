@@ -99,14 +99,15 @@ function pullRequestForJson(pull) {
 // `replace_in = ["headers"]` secret binding; `process.env` only carries a
 // per-run placeholder.
 function githubHeaders() {
+    const token = process.env["GH_TOKEN"];
+    if (!token) {
+        throw "GH_TOKEN secret is unavailable";
+    }
     const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
+        authorization: `Bearer ${token}`,
     };
-    const token = process.env["GH_TOKEN"];
-    if (token) {
-        headers.authorization = `Bearer ${token}`;
-    }
     return headers;
 }

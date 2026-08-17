@@ -14,9 +14,10 @@ export default async function check_active(repo) {
         "x-github-api-version": "2022-11-28",
     };
     const token = process.env["GH_TOKEN"];
-    if (token) {
-        headers.authorization = `Bearer ${token}`;
+    if (!token) {
+        throw "GH_TOKEN secret is unavailable";
     }
+    headers.authorization = `Bearer ${token}`;
 
     const resp = await fetch(`https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}`, { headers });
     if (resp.status === 404) {

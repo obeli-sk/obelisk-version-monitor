@@ -11,6 +11,8 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]
+secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
 
 [[activity_js]]
 name = "fetch_dev_deps"
@@ -24,6 +26,8 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]
+secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
 
 [[activity_js]]
 name = "fetch_pull_requests"
@@ -116,17 +120,14 @@ return_type = "result<string, string>"
 # Self-published state notification per repo-monitor cycle.
 [[activity_stub]]
 name = "repo_monitor_state"
-ffqn = "obeli-sk:version-monitor/repo-monitor.state"
-params = [
-  { name = "event-id", type = "string" },
-]
-return_type = "result<string, string>"
+ffqn = "obeli-sk:version-monitor/repo-monitor-state.state"
+wit = "wit/repo-monitor-state"
 
 # Action mailbox: the UI fulfils the pending offer to deliver run-gha / merge.
 [[activity_stub]]
 name = "repo_monitor_action"
-ffqn = "obeli-sk:version-monitor/repo-monitor.action"
-return_type = "result<string, string>"
+ffqn = "obeli-sk:version-monitor/repo-monitor-action.action"
+wit = "wit/repo-monitor-action"
 
 # Self-published repo -> execution-id directory per supervisor cycle.
 [[activity_stub]]

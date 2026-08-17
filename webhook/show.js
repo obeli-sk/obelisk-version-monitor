@@ -4,6 +4,7 @@
 // `obeli-sk:version-monitor/monitor.run`, fetches its return value, and
 // renders the resulting `[repo, version]` pairs as an HTML table.
 const WORKFLOW_FFQN = "obeli-sk:version-monitor/monitor.run";
+const REPO_MONITOR_FFQN = "obeli-sk:version-monitor/repo-monitor.run";
 const BUMP_FFQN = "obeli-sk:version-monitor/github.run-sync-flake-lock";
 const MERGE_FFQN = "obeli-sk:version-monitor/github.merge-pull-request";
 const PR_TITLE = "Sync `flake.lock` from upstream";
@@ -75,7 +76,8 @@ async function collectDashboardStatus() {
     }
 
     const rawRows = retVal.ok || [];
-    const [executionByRepo, mergeByRepo] = await Promise.all([
+    const [monitorByRepo, executionByRepo, mergeByRepo] = await Promise.all([
+        fetchLatestExecutionsByRepo(REPO_MONITOR_FFQN),
         fetchBumpExecutions(),
         fetchLatestExecutionsByRepo(MERGE_FFQN),
     ]);
@@ -93,6 +95,7 @@ async function collectDashboardStatus() {
             return {
                 repo,
                 version,
+                monitor_execution_id: monitorByRepo.get(repo)?.execution_id ?? null,
                 action_execution: executionForJson(executionByRepo.get(repo)),
                 pull_request: pull_request ?? null,
                 merge_execution: executionForJson(mergeByRepo.get(repo)),
@@ -215,15 +218,16 @@ function classifyChecks(checks) {
 }
 
 function githubHeaders() {
+    const token = process.env["GH_TOKEN"];
+    if (!token) {
+        throw new Error("GH_TOKEN secret is unavailable");
+    }
     const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
+        authorization: `Bearer ${token}`,
     };
-    const token = process.env["GH_TOKEN"];
-    if (token) {
-        headers.authorization = `Bearer ${token}`;
-    }
     return headers;
 }
 
@@ -453,7 +457,11 @@ function renderStatus(status) {
   }
   const rows = status.rows.map(function(row) {
     return '<tr><td><a target="_blank" rel="noopener" href="https://github.com/obeli-sk/' + encodeURIComponent(row.repo) + '">'
-      + escapeHtml(row.repo) + "</a></td><td><code>" + escapeHtml(row.version)
+      + escapeHtml(row.repo) + "</a>"
+      + (row.monitor_execution_id
+        ? "<br><small>" + executionLink(row.monitor_execution_id) + "</small>"
+        : "")
+      + "</td><td><code>" + escapeHtml(row.version)
       + '</code></td><td><a href="/bump/' + encodeURIComponent(row.repo)
       + '">Run sync-flake-lock</a></td><td>' + renderExecution(row.action_execution)
       + "</td><td>" + renderPullRequest(row) + "</td></tr>";

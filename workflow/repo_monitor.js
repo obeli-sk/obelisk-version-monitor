@@ -2,20 +2,20 @@
 //
 // One long-running workflow per repo. Each cycle it refreshes the repo's
 // obelisk version and sync-flake-lock PR state, self-publishes that snapshot on
-// the `repo-monitor.state` notification stub, then drains any actions delivered
-// on the `repo-monitor.action` mailbox stub (run-gha / merge) before sleeping.
+// the `repo-monitor-state.state` notification stub, then drains any actions
+// delivered on the `repo-monitor-action.action` mailbox stub before sleeping.
 // Exactly one action offer is kept outstanding at all times. The workflow ends
 // when the repo is archived or deleted.
 //
 // Minimal cut: actions are picked up on the next cycle (<= REFRESH_SECONDS)
 // rather than interrupting the sleep. The UI injects an action by fulfilling
-// the pending `repo-monitor.action` stub (PUT /v1/executions/<id>/stub) with an
-// ok payload of `{"kind":"run-gha"}` or `{"kind":"merge","number":N,"head":"<sha>"}`.
+// the pending `repo-monitor-action.action` stub (PUT /v1/executions/<id>/stub) with an
+// ok payload of `"run_gha"` or `{"merge":{"number":N,"head":"<sha>"}}`.
 import { fetchDevDeps, fetchPullRequests, checkActive } from "obeli-sk:version-monitor/repos";
 import { runSyncFlakeLock, mergePullRequest } from "obeli-sk:version-monitor/github";
 
-const STATE_FFQN = "obeli-sk:version-monitor/repo-monitor.state";
-const ACTION_FFQN = "obeli-sk:version-monitor/repo-monitor.action";
+const STATE_FFQN = "obeli-sk:version-monitor/repo-monitor-state.state";
+const ACTION_FFQN = "obeli-sk:version-monitor/repo-monitor-action.action";
 const REFRESH_SECONDS = 60;
 
 export default function run(repo) {
@@ -41,14 +41,14 @@ export default function run(repo) {
             pull_request: readPullRequest(repo),
         };
         const eid = state.submit(STATE_FFQN, [String(seq++)]);
-        obelisk.stub(eid, { ok: JSON.stringify(snapshot) });
+        obelisk.stub(eid, { ok: snapshot });
         state.joinNext();
 
         // Drain any actions delivered since the last cycle, re-arming the offer
         // after each so a single unambiguous target stays pending.
         let delivered = inbox.joinNextTry();
         while (delivered !== undefined) {
-            handleAction(repo, delivered, snapshot.pull_request);
+            handleAction(repo, delivered);
             inbox.submit(ACTION_FFQN, []);
             delivered = inbox.joinNextTry();
         }
@@ -81,23 +81,16 @@ function readPullRequest(repo) {
     }
 }
 
-function handleAction(repo, payloadJson, pullRequest) {
-    let action;
+function handleAction(repo, action) {
     try {
-        action = JSON.parse(payloadJson);
-    } catch (e) {
-        console.warn("ignoring malformed action:", payloadJson);
-        return;
-    }
-    try {
-        if (action.kind === "run-gha") {
+        if (action === "run_gha") {
             runSyncFlakeLock(repo);
-        } else if (action.kind === "merge") {
-            mergePullRequest(repo, action.number, action.head);
+        } else if (action?.merge) {
+            mergePullRequest(repo, action.merge.number, action.merge.head);
         } else {
-            console.warn("unknown action kind:", action.kind);
+            console.warn("unknown action:", JSON.stringify(action));
         }
     } catch (e) {
-        console.warn("action failed:", action.kind, String(e));
+        console.warn("action failed:", JSON.stringify(action), String(e));
     }
 }

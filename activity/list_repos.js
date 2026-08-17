@@ -4,10 +4,15 @@
 // returns a list of repository names. Throws on HTTP error which is converted
 // to the err arm of the result type.
 export default async function list_repos() {
+    const token = process.env["GH_TOKEN"];
+    if (!token) {
+        throw "GH_TOKEN secret is unavailable";
+    }
     const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
+        authorization: `Bearer ${token}`,
     };
 
     const repos = [];
