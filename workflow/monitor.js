@@ -1,4 +1,4 @@
-import { listRepos, fetchPullRequests } from "obeli-sk:version-monitor/repos";
+import { listRepos, fetchPullRequests, retireRepoMonitors } from "obeli-sk:version-monitor/repos";
 import { fetchDevDepsSubmit, fetchDevDepsAwaitNext } from "obeli-sk:version-monitor-obelisk-ext/repos";
 
 // obeli-sk:version-monitor/monitor.run:
@@ -15,6 +15,14 @@ import { fetchDevDepsSubmit, fetchDevDepsAwaitNext } from "obeli-sk:version-moni
 //  - Enriches each repo with its sync-flake-lock pull-request state.
 //  - Returns one record per repo, skipping repos without the file or line.
 export default function run() {
+    try {
+        const retired = retireRepoMonitors();
+        if (retired > 0) {
+            console.info("Retired", retired, "legacy repo monitors");
+        }
+    } catch (e) {
+        console.warn("Legacy repo monitor cleanup failed:", String(e));
+    }
 
     // List repos.
     const repos = listRepos();

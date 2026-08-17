@@ -7,6 +7,7 @@ name = "list_repos"
 location = "${DEPLOYMENT_DIR}/activity/list_repos.js"
 ffqn = "obeli-sk:version-monitor/repos.list-repos"
 return_type = "result<list<string>, string>"
+max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
@@ -22,6 +23,7 @@ params = [
   { name = "repo", type = "string" },
 ]
 return_type = "result<string, variant { permanent-not-found, transient-error(string), execution-failed }>"
+max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
@@ -37,6 +39,7 @@ params = [
   { name = "repos", type = "list<string>" },
 ]
 return_type = "result<string, string>"
+max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
@@ -79,28 +82,10 @@ secrets = ["GH_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
-name = "check_repo_active"
-location = "${DEPLOYMENT_DIR}/activity/check_repo_active.js"
-ffqn = "obeli-sk:version-monitor/repos.check-active"
-params = [
-  { name = "repo", type = "string" },
-]
-return_type = "result<bool, string>"
-exec.lock_expiry.seconds = 30
-[[activity_js.allowed_host]]
-pattern = "https://api.github.com"
-methods = ["GET"]
-secrets = ["GH_TOKEN"]
-replace_in = ["headers"]
-
-[[activity_js]]
-name = "reconcile_monitors"
-location = "${DEPLOYMENT_DIR}/activity/reconcile_monitors.js"
-ffqn = "obeli-sk:version-monitor/repos.reconcile-monitors"
-params = [
-  { name = "current-execution-id", type = "string" },
-]
-return_type = "result<string, string>"
+name = "retire_repo_monitors"
+location = "${DEPLOYMENT_DIR}/activity/retire_repo_monitors.js"
+ffqn = "obeli-sk:version-monitor/repos.retire-repo-monitors"
+return_type = "result<u32, string>"
 max_retries = 0
 exec.lock_expiry.seconds = 30
 env_vars = [
@@ -117,35 +102,6 @@ name = "monitor"
 location = "${DEPLOYMENT_DIR}/workflow/monitor.js"
 ffqn = "obeli-sk:version-monitor/monitor.run"
 return_type = "result<list<record { repo: string, version: string, pull-request: option<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }> }>, string>"
-
-# A finite reconciler runs every minute, retires prior deployment generations,
-# and ensures one current repo monitor exists for each repository.
-[[workflow_js]]
-name = "supervisor"
-location = "${DEPLOYMENT_DIR}/workflow/supervisor.js"
-ffqn = "obeli-sk:version-monitor/supervisor.reconcile"
-return_type = "result<string, string>"
-
-[[workflow_js]]
-name = "repo_monitor"
-location = "${DEPLOYMENT_DIR}/workflow/repo_monitor.js"
-ffqn = "obeli-sk:version-monitor/repo-monitor.run-cancellable"
-params = [
-  { name = "repo", type = "string" },
-]
-return_type = "result<string, string>"
-
-# Self-published state notification per repo-monitor cycle.
-[[activity_stub]]
-name = "repo_monitor_state"
-ffqn = "obeli-sk:version-monitor/repo-monitor-state.state"
-wit = "wit/repo-monitor-state"
-
-# Action mailbox: the UI fulfils the pending offer to deliver run-gha / merge.
-[[activity_stub]]
-name = "repo_monitor_action"
-ffqn = "obeli-sk:version-monitor/repo-monitor-action.action"
-wit = "wit/repo-monitor-action"
 
 [[webhook_endpoint_js]]
 name = "show"
@@ -173,9 +129,4 @@ replace_in = ["headers"]
 [[cron]]
 name = "monitor_run"
 ffqn = "obeli-sk:version-monitor/monitor.run"
-schedule = "* * * * *" # every minute
-
-[[cron]]
-name = "supervisor_reconcile"
-ffqn = "obeli-sk:version-monitor/supervisor.reconcile"
-schedule = "* * * * *" # every minute
+schedule = "*/5 * * * *" # every five minutes

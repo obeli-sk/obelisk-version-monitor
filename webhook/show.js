@@ -4,7 +4,6 @@
 // `obeli-sk:version-monitor/monitor.run`, fetches its return value, and
 // renders the resulting `[repo, version]` pairs as an HTML table.
 const WORKFLOW_FFQN = "obeli-sk:version-monitor/monitor.run";
-const REPO_MONITOR_FFQN = "obeli-sk:version-monitor/repo-monitor.run-cancellable";
 const BUMP_FFQN = "obeli-sk:version-monitor/github.run-sync-flake-lock";
 const MERGE_FFQN = "obeli-sk:version-monitor/github.merge-pull-request";
 const PR_TITLE = "Sync `flake.lock` from upstream";
@@ -76,8 +75,7 @@ async function collectDashboardStatus() {
     }
 
     const rawRows = retVal.ok || [];
-    const [monitorByRepo, executionByRepo, mergeByRepo] = await Promise.all([
-        fetchLatestExecutionsByRepo(REPO_MONITOR_FFQN),
+    const [executionByRepo, mergeByRepo] = await Promise.all([
         fetchBumpExecutions(),
         fetchLatestExecutionsByRepo(MERGE_FFQN),
     ]);
@@ -95,7 +93,7 @@ async function collectDashboardStatus() {
             return {
                 repo,
                 version,
-                monitor_execution_id: monitorByRepo.get(repo)?.execution_id ?? null,
+                monitor_execution_id: execId,
                 action_execution: executionForJson(executionByRepo.get(repo)),
                 pull_request: pull_request ?? null,
                 merge_execution: executionForJson(mergeByRepo.get(repo)),
@@ -145,7 +143,6 @@ async function fetchBumpExecutions() {
         if (typeof result.ok === "string"
             && /^https:\/\/github\.com\/obeli-sk\/[A-Za-z0-9._-]+\/actions\/runs\/[0-9]+$/.test(result.ok)) {
             execution.run_url = result.ok;
-            await fetchGitHubRun(execution);
         }
     }));
     return byRepo;
@@ -178,32 +175,6 @@ async function fetchLatestExecutionsByRepo(ffqn) {
         }
     }
     return byRepo;
-}
-
-async function fetchGitHubRun(execution) {
-    const match = execution.run_url.match(
-        /^https:\/\/github\.com\/obeli-sk\/([A-Za-z0-9._-]+)\/actions\/runs\/([0-9]+)$/,
-    );
-    if (!match) {
-        return;
-    }
-
-    const headers = githubHeaders();
-    const url = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(match[1])}/actions/runs/${match[2]}`;
-    try {
-        const resp = await fetch(url, { headers });
-        if (!resp.ok) {
-            console.warn("Failed to fetch GitHub run:", resp.status);
-            return;
-        }
-        const run = await resp.json();
-        execution.github_run = {
-            status: run.status,
-            conclusion: run.conclusion,
-        };
-    } catch (e) {
-        console.warn("Failed to fetch GitHub run:", String(e));
-    }
 }
 
 function classifyChecks(checks) {
@@ -242,7 +213,6 @@ function executionForJson(execution) {
         status,
         result: status === "finished" ? formatResultKind(state.result_kind) : null,
         run_url: execution.run_url || null,
-        github_run: execution.github_run || null,
     };
 }
 
@@ -396,15 +366,6 @@ function renderExecution(execution) {
     ? "finished: " + (execution.result || "unknown")
     : execution.status.replaceAll("_", " ");
   let className = execution.status === "finished" ? "" : ' class="in-progress"';
-  if (execution.github_run && execution.github_run.status) {
-    if (execution.github_run.status === "completed") {
-      label = "GH: completed: " + (execution.github_run.conclusion || "unknown");
-      className = "";
-    } else {
-      label = "GH: " + execution.github_run.status.replaceAll("_", " ");
-      className = ' class="in-progress"';
-    }
-  }
   const status = execution.run_url
     ? "<a" + className + ' target="_blank" rel="noopener" href="' + escapeHtml(execution.run_url) + '">' + escapeHtml(label) + "</a>"
     : "<span" + className + ">" + escapeHtml(label) + "</span>";

@@ -23,14 +23,13 @@ export default async function fetch_dev_deps(repo) {
     }
     const headers = {
         authorization: `Bearer ${token}`,
-        "cache-control": "no-cache",
         "user-agent": "obelisk-version-monitor",
     };
 
     // Try `main` first, then fall back to `master`.
     const branches = ["main", "master"];
     for (const branch of branches) {
-        const url = `https://raw.githubusercontent.com/obeli-sk/${repo}/${branch}/dev-deps.txt?cache-bust=${Date.now()}`;
+        const url = `https://raw.githubusercontent.com/obeli-sk/${repo}/${branch}/dev-deps.txt`;
         console.info("Fetching", url);
         const resp = await fetch(url, { headers });
         if (resp.ok) {

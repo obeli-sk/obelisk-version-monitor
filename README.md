@@ -8,7 +8,7 @@ The dashboard can:
 
 - show the version from each repository's `dev-deps.txt`;
 - dispatch its `sync-flake-lock.yml` GitHub Actions workflow;
-- track the Obelisk activity and GitHub Actions run;
+- link the Obelisk activity and GitHub Actions run;
 - find the resulting ``Sync `flake.lock` from upstream`` pull request;
 - display pull request checks; and
 - merge a passing pull request through an audited Obelisk activity.
@@ -20,7 +20,8 @@ without reloading the page.
 
 ![Version monitor dashboard](docs/dashboard.png)
 
-Each Obelisk activity displays its execution ID. GitHub Actions runs and pull
+Each row links to the shared monitor execution that produced it. Obelisk
+activities display their execution IDs, while GitHub Actions runs and pull
 requests link to GitHub.
 
 ## Development
