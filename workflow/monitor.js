@@ -1,15 +1,19 @@
-import { listRepos } from "obeli-sk:version-monitor/repos";
+import { listRepos, fetchPullRequests } from "obeli-sk:version-monitor/repos";
 import { fetchDevDepsSubmit, fetchDevDepsAwaitNext } from "obeli-sk:version-monitor-obelisk-ext/repos";
 
 // obeli-sk:version-monitor/monitor.run:
-//   func() -> result<list<tuple<string, string>>, string>
+//   func() -> result<list<record {
+//     repo: string, version: string,
+//     pull-request: option<record { number: u64, html-url: string, state: string,
+//       checks-state: option<string>, head-sha: option<string> }>,
+//   }>, string>
 //
 // Periodic workflow that:
 //  - Lists all public repositories of the `obeli-sk` GitHub org.
 //  - In parallel, fetches `dev-deps.txt` from each repo.
 //  - Parses the line `obelisk <version>` from each file.
-//  - Returns a list of `[repo, version]` pairs, skipping repos that
-//      don't have the file or the line.
+//  - Enriches each repo with its sync-flake-lock pull-request state.
+//  - Returns one record per repo, skipping repos without the file or line.
 export default function run() {
 
     // List repos.
@@ -48,7 +52,23 @@ export default function run() {
 
     // Sort for stable output.
     versions.sort((a, b) => a[0].localeCompare(b[0]));
-    return versions;
+
+    // Enrich each repo with its sync-flake-lock pull-request state (an org-wide
+    // GitHub PR search plus per-PR check-runs) so the dashboard reads the whole
+    // row from this execution's result instead of calling GitHub per page load.
+    // A failure here must not drop the version result: fall back to no PR info.
+    let prByRepo = {};
+    try {
+        prByRepo = JSON.parse(fetchPullRequests(versions.map(([repo]) => repo)));
+    } catch (e) {
+        console.warn("fetch-pull-requests failed:", e);
+    }
+
+    return versions.map(([repo, version]) => ({
+        repo,
+        version,
+        pull_request: prByRepo[repo] ?? null,
+    }));
 }
 
 // Join set names allow only alphanumeric, `-`, and `/`. Replace anything

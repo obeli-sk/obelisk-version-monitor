@@ -23,6 +23,20 @@ return_type = "result<string, variant { permanent-not-found, transient-error(str
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]
 
+[[activity_js]]
+name = "fetch_pull_requests"
+location = "${DEPLOYMENT_DIR}/activity/fetch_pull_requests.js"
+ffqn = "obeli-sk:version-monitor/repos.fetch-pull-requests"
+params = [
+  { name = "repos", type = "list<string>" },
+]
+return_type = "result<string, string>"
+[[activity_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["GET"]
+secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
+
 [[activity_exec]]
 name = "run_sync_flake_lock"
 location = "${DEPLOYMENT_DIR}/activity/run_sync_flake_lock.sh"
@@ -55,7 +69,7 @@ secrets = ["GH_TOKEN"]
 name = "monitor"
 location = "${DEPLOYMENT_DIR}/workflow/monitor.js"
 ffqn = "obeli-sk:version-monitor/monitor.run"
-return_type = "result<list<tuple<string, string>>, string>"
+return_type = "result<list<record { repo: string, version: string, pull-request: option<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }> }>, string>"
 
 [[webhook_endpoint_js]]
 name = "show"
@@ -64,7 +78,7 @@ routes = [
   { methods = ["GET"], route = "/" },
   { methods = ["GET"], route = "/api/status" },
   { methods = ["GET"], route = "/bump/:repo" },
-  { methods = ["POST"], route = "/merge/:repo/:number" },
+  { methods = ["GET"], route = "/merge/:repo/:number" },
 ]
 env_vars = [
   { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },

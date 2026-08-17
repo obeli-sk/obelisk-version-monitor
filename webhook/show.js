@@ -74,24 +74,30 @@ async function collectDashboardStatus() {
             : `Execution error: ${JSON.stringify(retVal.execution_failed)}`);
     }
 
-    const pairs = retVal.ok || [];
-    const [executionByRepo, mergeByRepo, prByRepo] = await Promise.all([
+    const rawRows = retVal.ok || [];
+    const [executionByRepo, mergeByRepo] = await Promise.all([
         fetchBumpExecutions(),
         fetchLatestExecutionsByRepo(MERGE_FFQN),
-        fetchPullRequests(pairs.map(([repo]) => repo)),
     ]);
     return {
         latest_run: {
             execution_id: execId,
             created_at: latestFinished.created_at || "",
         },
-        rows: pairs.map(([repo, version]) => ({
-            repo,
-            version,
-            action_execution: executionForJson(executionByRepo.get(repo)),
-            pull_request: pullRequestForJson(prByRepo.get(repo)),
-            merge_execution: executionForJson(mergeByRepo.get(repo)),
-        })),
+        rows: rawRows.map((row) => {
+            // backcompat: before the record refactor monitor.run returned
+            // tuple<string,string>; tolerate the old shape during redeploy.
+            const { repo, version, pull_request } = Array.isArray(row)
+                ? { repo: row[0], version: row[1], pull_request: null }
+                : row;
+            return {
+                repo,
+                version,
+                action_execution: executionForJson(executionByRepo.get(repo)),
+                pull_request: pull_request ?? null,
+                merge_execution: executionForJson(mergeByRepo.get(repo)),
+            };
+        }),
     };
 }
 
@@ -197,68 +203,6 @@ async function fetchGitHubRun(execution) {
     }
 }
 
-async function fetchPullRequests(repos) {
-    const headers = githubHeaders();
-
-    const byRepo = new Map(repos.map((repo) => [repo, null]));
-    const query = `org:obeli-sk is:pr in:title "${PR_TITLE}"`;
-    const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}&per_page=100&sort=created&order=desc`;
-    try {
-        const resp = await fetch(url, { headers });
-        if (!resp.ok) {
-            console.warn("Failed to search PRs:", resp.status);
-            return new Map(repos.map((repo) => [repo, { error: `HTTP ${resp.status}` }]));
-        }
-        const payload = await resp.json();
-        for (const pull of payload.items || []) {
-            if (pull.title !== PR_TITLE) {
-                continue;
-            }
-            const repo = pull.repository_url?.split("/").pop();
-            if (byRepo.has(repo) && byRepo.get(repo) === null) {
-                byRepo.set(repo, pull);
-            }
-        }
-        await Promise.all(Array.from(byRepo.entries()).map(async ([repo, pull]) => {
-            if (pull?.state === "open") {
-                await fetchPullRequestChecks(repo, pull, headers);
-            }
-        }));
-    } catch (e) {
-        console.warn("Failed to search PRs:", String(e));
-        return new Map(repos.map((repo) => [repo, { error: String(e) }]));
-    }
-    return byRepo;
-}
-
-async function fetchPullRequestChecks(repo, pull, headers) {
-    try {
-        const pullUrl = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${pull.number}`;
-        const pullResp = await fetch(pullUrl, { headers });
-        if (!pullResp.ok) {
-            console.warn("Failed to fetch PR:", repo, pull.number, pullResp.status);
-            return;
-        }
-        const details = await pullResp.json();
-        const sha = details.head?.sha;
-        if (typeof sha !== "string") {
-            return;
-        }
-        pull.head_sha = sha;
-
-        const checksUrl = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/commits/${sha}/check-runs?per_page=100`;
-        const checksResp = await fetch(checksUrl, { headers });
-        if (!checksResp.ok) {
-            console.warn("Failed to fetch PR checks:", repo, pull.number, checksResp.status);
-            return;
-        }
-        const payload = await checksResp.json();
-        pull.checks_state = classifyChecks(payload.check_runs || []);
-    } catch (e) {
-        console.warn("Failed to fetch PR checks:", repo, pull.number, String(e));
-    }
-}
-
 function classifyChecks(checks) {
     if (checks.some((check) => check.status !== "completed")) {
         return "in progress";
@@ -295,25 +239,6 @@ function executionForJson(execution) {
         result: status === "finished" ? formatResultKind(state.result_kind) : null,
         run_url: execution.run_url || null,
         github_run: execution.github_run || null,
-    };
-}
-
-function pullRequestForJson(pull) {
-    if (pull === undefined) {
-        return { error: "Unknown" };
-    }
-    if (pull === null) {
-        return null;
-    }
-    if (pull.error) {
-        return { error: pull.error };
-    }
-    return {
-        number: pull.number,
-        html_url: pull.html_url,
-        state: pull.merged_at || pull.pull_request?.merged_at ? "merged" : pull.state,
-        checks_state: pull.checks_state || null,
-        head_sha: pull.head_sha || null,
     };
 }
 
@@ -419,7 +344,6 @@ function dashboardPage() {
   code { font-size: 0.95em; }
   .err { color: #b00; }
   .in-progress { color: #965c00; font-weight: 600; }
-  .inline { display: inline; }
   small { color: #666; }
 </style>
 </head>
@@ -507,10 +431,10 @@ function renderPullRequest(row) {
       + escapeHtml(pull.checks_state) + "</span>";
   }
   if (pull.state === "open" && pull.checks_state === "passing" && pull.head_sha) {
-    html += ' · <form class="inline" method="post" action="/merge/'
+    html += ' · <a href="/merge/'
       + encodeURIComponent(row.repo) + "/" + pull.number + "?head="
       + encodeURIComponent(pull.head_sha)
-      + '"><button type="submit">Merge</button></form>';
+      + '">Merge</a>';
   }
   return html + renderMergeExecution(row.merge_execution);
 }
@@ -539,7 +463,7 @@ function renderStatus(status) {
     + rows + "</tbody></table>";
 }
 
-// Navigating away (e.g. submitting the Merge form or following the bump link)
+// Navigating away (e.g. following the Merge or bump link)
 // aborts the in-flight /api/status fetch, which would otherwise flash a bogus
 // "Failed to refresh" error before the next page loads.
 let navigatingAway = false;
