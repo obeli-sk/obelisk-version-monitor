@@ -50,10 +50,10 @@ async function collectDashboardStatus() {
     if (executions.length === 0) {
         return { message: "No workflow execution has been scheduled yet by the cron task.", rows: [] };
     }
-    const latestFinished = executions.find(
+    const finished = executions.filter(
         (e) => e.pending_state && e.pending_state.status === "finished",
     );
-    if (!latestFinished) {
+    if (finished.length === 0) {
         const pending = executions[0];
         return {
             message: `Workflow ${pending.execution_id} is ${pending.pending_state.status}.`,
@@ -61,20 +61,35 @@ async function collectDashboardStatus() {
         };
     }
 
-    const execId = latestFinished.execution_id;
-    const retUrlSuffix = `/v1/executions/${encodeURIComponent(execId)}`;
-    const retResp = await fetchObelisk(retUrlSuffix);
-    if (!retResp.ok) {
-        throw new Error(`Failed to fetch execution ${execId}: HTTP ${retResp.status}`);
+    const latestFinished = finished[0];
+    let selected = null;
+    let emptyFallback = null;
+    for (const execution of finished) {
+        if (execution.pending_state.result_kind !== "ok") {
+            continue;
+        }
+        const result = await fetchExecutionResult(execution.execution_id);
+        if (!("ok" in result) || !Array.isArray(result.ok)) {
+            continue;
+        }
+        const candidate = { execution, rows: result.ok };
+        if (result.ok.length > 0) {
+            selected = candidate;
+            break;
+        }
+        if (emptyFallback === null) {
+            emptyFallback = candidate;
+        }
     }
-    const retVal = await retResp.json();
-    if (!("ok" in retVal)) {
-        throw new Error("err" in retVal
-            ? `Workflow failed: ${String(retVal.err)}`
-            : `Execution error: ${JSON.stringify(retVal.execution_failed)}`);
+    if (selected === null) {
+        selected = emptyFallback;
+    }
+    if (selected === null) {
+        throw new Error("No successful monitor result is available");
     }
 
-    const rawRows = retVal.ok || [];
+    const execId = selected.execution.execution_id;
+    const rawRows = selected.rows;
     const [executionByRepo, mergeByRepo] = await Promise.all([
         fetchBumpExecutions(),
         fetchLatestExecutionsByRepo(MERGE_FFQN),
@@ -82,8 +97,10 @@ async function collectDashboardStatus() {
     return {
         latest_run: {
             execution_id: execId,
-            created_at: latestFinished.created_at || "",
+            created_at: selected.execution.created_at || "",
         },
+        stale: execId !== latestFinished.execution_id,
+        latest_attempt_execution_id: latestFinished.execution_id,
         rows: rawRows.map((row) => {
             // backcompat: before the record refactor monitor.run returned
             // tuple<string,string>; tolerate the old shape during redeploy.
@@ -100,6 +117,15 @@ async function collectDashboardStatus() {
             };
         }),
     };
+}
+
+async function fetchExecutionResult(executionId) {
+    const suffix = `/v1/executions/${encodeURIComponent(executionId)}`;
+    const response = await fetchObelisk(suffix);
+    if (!response.ok) {
+        throw new Error(`Failed to fetch execution ${executionId}: HTTP ${response.status}`);
+    }
+    return await response.json();
 }
 
 async function fetchBumpExecutions() {
@@ -410,7 +436,12 @@ function renderStatus(status) {
   } else {
     meta.innerHTML = "<p>Latest run: "
       + executionLink(status.latest_run.execution_id) + " · created <code>"
-      + escapeHtml(status.latest_run.created_at) + "</code></p>";
+      + escapeHtml(status.latest_run.created_at) + "</code>"
+      + (status.stale
+        ? ' · <span class="in-progress">showing previous data; latest refresh '
+          + executionLink(status.latest_attempt_execution_id) + " failed or returned no rows</span>"
+        : "")
+      + "</p>";
   }
   if (!status.rows || status.rows.length === 0) {
     dashboard.innerHTML = "";

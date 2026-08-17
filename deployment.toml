@@ -25,6 +25,7 @@ params = [
 return_type = "result<string, variant { permanent-not-found, transient-error(string), execution-failed }>"
 max_retries = 0
 exec.lock_expiry.seconds = 30
+exec.instance_limiter = 1
 [[activity_js.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]

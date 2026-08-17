@@ -44,18 +44,23 @@ export default function run() {
     // Drain each join set in submission order, parsing the obelisk version
     // line from each successful response.
     const versions = [];
+    let failedFetches = 0;
     for (const { repo, js } of perRepo) {
         let result;
         try {
             result = fetchDevDepsAwaitNext(js);
         } catch (e) {
             console.warn("dev-deps fetch failed for", repo);
+            failedFetches += 1;
             continue;
         }
         const version = parseObeliskVersion(result);
         if (version !== null) {
             versions.push([repo, version]);
         }
+    }
+    if (repos.length > 0 && failedFetches === repos.length) {
+        throw "all dev-deps fetches failed";
     }
 
     // Sort for stable output.
