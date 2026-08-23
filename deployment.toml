@@ -45,6 +45,21 @@ secrets = ["GH_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
+name = "fetch_gh_actions"
+location = "activity/fetch_gh_actions.js"
+ffqn = "obeli-sk:version-monitor/github.fetch-gh-actions"
+params = [
+  { name = "repos", type = "list<string>" },
+]
+return_type = "result<string, string>"
+exec.lock_expiry.seconds = 30
+[[activity_js.allowed_host]]
+pattern = "https://api.github.com"
+methods = ["GET"]
+secrets = ["GH_TOKEN"]
+replace_in = ["headers"]
+
+[[activity_js]]
 name = "run_sync_flake_lock"
 location = "activity/run_sync_flake_lock.js"
 ffqn = "obeli-sk:version-monitor/github.run-sync-flake-lock"
@@ -95,7 +110,16 @@ replace_in = ["headers"]
 name = "monitor"
 location = "workflow/monitor.js"
 ffqn = "obeli-sk:version-monitor/monitor.run"
-return_type = "result<list<record { repo: string, version: string, pull-request: option<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }> }>, string>"
+return_type = "result<list<record { repo: string, version: string, pull-requests: list<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }>, gh-action: option<record { html-url: string, status: string }> }>, string>"
+
+[[workflow_js]]
+name = "bump"
+location = "workflow/bump.js"
+ffqn = "obeli-sk:version-monitor/bump.run"
+params = [
+  { name = "repos", type = "list<string>" },
+]
+return_type = "result<list<record { repo: string, result: string }>, string>"
 
 [[webhook_endpoint_js]]
 name = "show"
@@ -104,7 +128,7 @@ routes = [
   { methods = ["GET"], route = "/" },
   { methods = ["GET"], route = "/api/status" },
   { methods = ["GET"], route = "/refresh" },
-  { methods = ["GET"], route = "/bump/:repo" },
+  { methods = ["POST"], route = "/bump" },
   { methods = ["GET"], route = "/merge/:repo/:number" },
 ]
 env_vars = [

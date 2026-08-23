@@ -1,17 +1,19 @@
-// GET  / — Display the latest finished run of the version-monitor workflow.
+// Dashboard for the version-monitor workflow.
 //
-// Queries the obelisk REST API for the most recent finished execution of
-// `obeli-sk:version-monitor/monitor.run`, fetches its return value, and
-// renders the resulting `[repo, version]` pairs as an HTML table.
+// GET `/` serves the page; GET `/api/status` reads only the return value of the
+// most recent finished `monitor.run` execution (which now owns every column) and
+// maps its rows straight through, so page loads no longer crawl execution
+// history. POST `/bump` schedules a batch `bump.run` over the selected repos and
+// GET `/merge/:repo/:number` schedules an audited merge.
 const WORKFLOW_FFQN = "obeli-sk:version-monitor/monitor.run";
-const BUMP_FFQN = "obeli-sk:version-monitor/github.run-sync-flake-lock";
+const BUMP_WORKFLOW_FFQN = "obeli-sk:version-monitor/bump.run";
 const MERGE_FFQN = "obeli-sk:version-monitor/github.merge-pull-request";
 const PR_TITLE = "Sync `flake.lock` from upstream";
 
 export default async function handle(request) {
     const url = new URL(request.url);
-    if (url.pathname.startsWith("/bump/")) {
-        return runBump(url.pathname.substring("/bump/".length));
+    if (url.pathname === "/bump" && request.method === "POST") {
+        return await runBump(request);
     }
     if (url.pathname.startsWith("/merge/")) {
         return runMerge(request, url.pathname.substring("/merge/".length));
@@ -92,11 +94,6 @@ async function collectDashboardStatus() {
     }
 
     const execId = selected.execution.execution_id;
-    const rawRows = selected.rows;
-    const [executionByRepo, mergeByRepo] = await Promise.all([
-        fetchBumpExecutions(),
-        fetchLatestExecutionsByRepo(MERGE_FFQN),
-    ]);
     return {
         latest_run: {
             execution_id: execId,
@@ -104,19 +101,28 @@ async function collectDashboardStatus() {
         },
         stale: execId !== latestFinished.execution_id,
         latest_attempt_execution_id: latestFinished.execution_id,
-        rows: rawRows.map((row) => {
-            // backcompat: before the record refactor monitor.run returned
-            // tuple<string,string>; tolerate the old shape during redeploy.
-            const { repo, version, pull_request } = Array.isArray(row)
-                ? { repo: row[0], version: row[1], pull_request: null }
-                : row;
+        rows: selected.rows.map((row) => {
+            // backcompat: monitor.run once returned a [repo, version] tuple, then
+            // a record with a single `pull_request` and no `gh_action`. Tolerate
+            // both older shapes during a redeploy window.
+            let repo, version, pullRequests, ghAction;
+            if (Array.isArray(row)) {
+                repo = row[0];
+                version = row[1];
+                pullRequests = [];
+                ghAction = null;
+            } else {
+                repo = row.repo;
+                version = row.version;
+                pullRequests = row.pull_requests
+                    ?? (row.pull_request ? [row.pull_request] : []);
+                ghAction = row.gh_action ?? null;
+            }
             return {
                 repo,
                 version,
-                monitor_execution_id: execId,
-                action_execution: executionForJson(executionByRepo.get(repo)),
-                pull_request: pull_request ?? null,
-                merge_execution: executionForJson(mergeByRepo.get(repo)),
+                pull_requests: pullRequests,
+                gh_action: ghAction,
             };
         }),
     };
@@ -129,81 +135,6 @@ async function fetchExecutionResult(executionId) {
         throw new Error(`Failed to fetch execution ${executionId}: HTTP ${response.status}`);
     }
     return await response.json();
-}
-
-async function fetchBumpExecutions() {
-    const listUrlSuffix = `/v1/executions?ffqn_prefix=${encodeURIComponent(BUMP_FFQN)}&show_derived=true&length=100`;
-    const resp = await fetchObelisk(listUrlSuffix);
-    if (!resp.ok) {
-        console.warn("Failed to list bump executions:", resp.status);
-        return new Map();
-    }
-
-    const executions = await resp.json();
-    const entries = await Promise.all(executions.map(async (execution) => {
-        const eventsUrlSuffix = `/v1/executions/${encodeURIComponent(execution.execution_id)}/events?version=0&including_cursor=true&length=1`;
-        const eventsResp = await fetchObelisk(eventsUrlSuffix);
-        if (!eventsResp.ok) {
-            return null;
-        }
-        const payload = await eventsResp.json();
-        const repo = payload.events?.[0]?.event?.created?.params?.[0];
-        return typeof repo === "string" ? [repo, execution] : null;
-    }));
-
-    const byRepo = new Map();
-    for (const entry of entries) {
-        if (entry !== null && !byRepo.has(entry[0])) {
-            byRepo.set(entry[0], entry[1]);
-        }
-    }
-
-    await Promise.all(Array.from(byRepo.values()).map(async (execution) => {
-        if (execution.pending_state?.status !== "finished"
-            || execution.pending_state?.result_kind !== "ok") {
-            return;
-        }
-        const resultUrlSuffix = `/v1/executions/${encodeURIComponent(execution.execution_id)}`;
-        const resultResp = await fetchObelisk(resultUrlSuffix);
-        if (!resultResp.ok) {
-            return;
-        }
-        const result = await resultResp.json();
-        if (typeof result.ok === "string"
-            && /^https:\/\/github\.com\/obeli-sk\/[A-Za-z0-9._-]+\/actions\/runs\/[0-9]+$/.test(result.ok)) {
-            execution.run_url = result.ok;
-        }
-    }));
-    return byRepo;
-}
-
-async function fetchLatestExecutionsByRepo(ffqn) {
-    const listUrlSuffix = `/v1/executions?ffqn_prefix=${encodeURIComponent(ffqn)}&show_derived=true&length=100`;
-    const resp = await fetchObelisk(listUrlSuffix);
-    if (!resp.ok) {
-        console.warn("Failed to list executions:", ffqn, resp.status);
-        return new Map();
-    }
-
-    const executions = await resp.json();
-    const entries = await Promise.all(executions.map(async (execution) => {
-        const eventsUrlSuffix = `/v1/executions/${encodeURIComponent(execution.execution_id)}/events?version=0&including_cursor=true&length=1`;
-        const eventsResp = await fetchObelisk(eventsUrlSuffix);
-        if (!eventsResp.ok) {
-            return null;
-        }
-        const payload = await eventsResp.json();
-        const repo = payload.events?.[0]?.event?.created?.params?.[0];
-        return typeof repo === "string" ? [repo, execution] : null;
-    }));
-
-    const byRepo = new Map();
-    for (const entry of entries) {
-        if (entry !== null && !byRepo.has(entry[0])) {
-            byRepo.set(entry[0], entry[1]);
-        }
-    }
-    return byRepo;
 }
 
 function classifyChecks(checks) {
@@ -231,30 +162,6 @@ function githubHeaders() {
     return headers;
 }
 
-function executionForJson(execution) {
-    if (!execution) {
-        return null;
-    }
-    const state = execution.pending_state || {};
-    const status = state.status || "unknown";
-    return {
-        execution_id: execution.execution_id,
-        status,
-        result: status === "finished" ? formatResultKind(state.result_kind) : null,
-        run_url: execution.run_url || null,
-    };
-}
-
-function formatResultKind(resultKind) {
-    if (typeof resultKind === "string") {
-        return resultKind;
-    }
-    if (resultKind?.err?.execution_failure) {
-        return `error: ${String(resultKind.err.execution_failure).replaceAll("_", " ")}`;
-    }
-    return resultKind ? JSON.stringify(resultKind) : "unknown";
-}
-
 function runRefresh() {
     const execId = obelisk.executionIdGenerate();
     try {
@@ -268,28 +175,49 @@ function runRefresh() {
     });
 }
 
-function runBump(encodedRepo) {
-    let repo;
+async function runBump(request) {
+    let body = "";
     try {
-        repo = decodeURIComponent(encodedRepo);
+        body = await request.text();
     } catch {
-        return errorPage(400, "Invalid repository name");
+        body = "";
     }
-    if (!/^[A-Za-z0-9._-]+$/.test(repo)) {
-        return errorPage(400, "Invalid repository name");
+    const repos = parseRepoList(body);
+    if (repos.length === 0) {
+        return errorPage(400, "No repositories selected");
+    }
+    for (const repo of repos) {
+        if (!/^[A-Za-z0-9._-]+$/.test(repo)) {
+            return errorPage(400, "Invalid repository name");
+        }
     }
 
     const execId = obelisk.executionIdGenerate();
     try {
-        obelisk.schedule(execId, BUMP_FFQN, [repo]);
+        obelisk.schedule(execId, BUMP_WORKFLOW_FFQN, [repos]);
     } catch (e) {
-        return errorPage(502, `Failed to schedule sync-flake-lock for ${repo}: ${String(e)}`);
+        return errorPage(502, `Failed to schedule sync-flake-lock: ${String(e)}`);
     }
 
     return new Response(null, {
         status: 303,
-        headers: { location: `/?submitted=${encodeURIComponent(repo)}` },
+        headers: { location: `/?bumped=${repos.length}` },
     });
+}
+
+// Parse `repo=a&repo=b` from an `application/x-www-form-urlencoded` body.
+function parseRepoList(body) {
+    const repos = [];
+    for (const part of body.split("&")) {
+        if (part === "") {
+            continue;
+        }
+        const [rawKey, rawValue = ""] = part.split("=", 2);
+        if (decodeURIComponent(rawKey) === "repo") {
+            repos.push(decodeURIComponent(rawValue.replaceAll("+", " ")));
+        }
+    }
+    return repos;
 }
 
 async function runMerge(request, path) {
@@ -369,7 +297,10 @@ function dashboardPage() {
 <p><a href="/refresh">Refresh all</a> (runs the monitor workflow now)</p>
 <div id="notice"></div>
 <div id="meta"><p>Loading...</p></div>
+<form id="bump-form" method="POST" action="/bump">
+<p><button type="submit">Run sync-flake-lock on selected</button></p>
 <div id="dashboard"></div>
+</form>
 <script>
 const notice = document.getElementById("notice");
 const meta = document.getElementById("meta");
@@ -393,61 +324,65 @@ function executionLink(id) {
 
 function renderNotice() {
   const params = new URLSearchParams(location.search);
-  const submitted = params.get("submitted");
+  const bumped = params.get("bumped");
   const mergeSubmitted = params.get("merge_submitted");
   if (params.get("refreshed")) {
     notice.innerHTML = '<p class="in-progress">Scheduled a monitor refresh.</p>';
-  } else if (submitted) {
+  } else if (bumped) {
     notice.innerHTML = '<p class="in-progress">Scheduled sync-flake-lock for <code>'
-      + escapeHtml(submitted) + "</code>.</p>";
+      + escapeHtml(bumped) + "</code> repositories.</p>";
   } else if (mergeSubmitted) {
     notice.innerHTML = '<p class="in-progress">Scheduled PR merge for <code>'
       + escapeHtml(mergeSubmitted) + "</code>.</p>";
   }
 }
 
-function renderExecution(execution) {
-  if (!execution) return "Not run";
-  let label = execution.status === "finished"
-    ? "finished: " + (execution.result || "unknown")
-    : execution.status.replaceAll("_", " ");
-  let className = execution.status === "finished" ? "" : ' class="in-progress"';
-  const status = execution.run_url
-    ? "<a" + className + ' target="_blank" rel="noopener" href="' + escapeHtml(execution.run_url) + '">' + escapeHtml(label) + "</a>"
-    : "<span" + className + ">" + escapeHtml(label) + "</span>";
-  return status + "<br><small>" + executionLink(execution.execution_id) + "</small>";
+// Preserve the user's row selection across the 5s poll re-render.
+function currentSelection() {
+  const set = new Set();
+  document.querySelectorAll('#dashboard input[name="repo"]:checked')
+    .forEach(function(cb) { set.add(cb.value); });
+  return set;
 }
 
-function renderMergeExecution(execution) {
-  if (!execution) return "";
-  const label = execution.status === "finished"
-    ? execution.result || "unknown"
-    : execution.status.replaceAll("_", " ");
-  const className = execution.status === "finished" ? "" : ' class="in-progress"';
-  return '<br>merge <span' + className + ">" + escapeHtml(label)
-    + "</span><br><small>" + executionLink(execution.execution_id) + "</small>";
+function toggleAll(master) {
+  document.querySelectorAll('#dashboard input[name="repo"]')
+    .forEach(function(cb) { cb.checked = master.checked; });
 }
 
-function renderPullRequest(row) {
-  const pull = row.pull_request;
-  if (pull === null) return "Not found";
-  if (pull.error) return '<span class="err">' + escapeHtml(pull.error) + "</span>";
-  let html = '<a target="_blank" rel="noopener" href="' + escapeHtml(pull.html_url) + '">#'
-    + escapeHtml(pull.number) + "</a> " + escapeHtml(pull.state);
-  if (pull.state === "open" && pull.checks_state) {
-    const className = pull.checks_state === "in progress"
-      ? "in-progress"
-      : pull.checks_state === "erroring" ? "err" : "";
-    html += ' · <span class="' + className + '">checks: '
-      + escapeHtml(pull.checks_state) + "</span>";
-  }
-  if (pull.state === "open" && pull.checks_state === "passing" && pull.head_sha) {
-    html += ' · <a href="/merge/'
-      + encodeURIComponent(row.repo) + "/" + pull.number + "?head="
-      + encodeURIComponent(pull.head_sha)
-      + '">Merge</a>';
-  }
-  return html + renderMergeExecution(row.merge_execution);
+function renderGhAction(action) {
+  if (!action) return "None";
+  const className = /success|completed/.test(action.status)
+    ? ""
+    : /fail|error|cancel|timed_out/.test(action.status) ? "err" : "in-progress";
+  const label = '<span class="' + className + '">' + escapeHtml(action.status) + "</span>";
+  return action.html_url
+    ? '<a target="_blank" rel="noopener" href="' + escapeHtml(action.html_url) + '">' + label + "</a>"
+    : label;
+}
+
+function renderPullRequests(row) {
+  const pulls = row.pull_requests || [];
+  if (pulls.length === 0) return "None";
+  return pulls.map(function(pull) {
+    if (pull.error) return '<span class="err">' + escapeHtml(pull.error) + "</span>";
+    let html = '<a target="_blank" rel="noopener" href="' + escapeHtml(pull.html_url) + '">#'
+      + escapeHtml(pull.number) + "</a> " + escapeHtml(pull.state);
+    if (pull.checks_state) {
+      const className = pull.checks_state === "in progress"
+        ? "in-progress"
+        : pull.checks_state === "erroring" ? "err" : "";
+      html += ' · <span class="' + className + '">checks: '
+        + escapeHtml(pull.checks_state) + "</span>";
+    }
+    if (pull.checks_state === "passing" && pull.head_sha) {
+      html += ' · <a href="/merge/'
+        + encodeURIComponent(row.repo) + "/" + pull.number + "?head="
+        + encodeURIComponent(pull.head_sha)
+        + '">Merge</a>';
+    }
+    return html;
+  }).join("<br>");
 }
 
 function renderStatus(status) {
@@ -467,23 +402,23 @@ function renderStatus(status) {
     dashboard.innerHTML = "";
     return;
   }
+  const selected = currentSelection();
   const rows = status.rows.map(function(row) {
-    return '<tr><td><a target="_blank" rel="noopener" href="https://github.com/obeli-sk/' + encodeURIComponent(row.repo) + '">'
-      + escapeHtml(row.repo) + "</a>"
-      + (row.monitor_execution_id
-        ? "<br><small>" + executionLink(row.monitor_execution_id) + "</small>"
-        : "")
-      + "</td><td><code>" + escapeHtml(row.version)
-      + '</code></td><td><a href="/bump/' + encodeURIComponent(row.repo)
-      + '">Run sync-flake-lock</a></td><td>' + renderExecution(row.action_execution)
-      + "</td><td>" + renderPullRequest(row) + "</td></tr>";
+    return '<tr><td><input type="checkbox" name="repo" value="'
+      + escapeHtml(row.repo) + '"' + (selected.has(row.repo) ? " checked" : "") + "></td>"
+      + '<td><a target="_blank" rel="noopener" href="https://github.com/obeli-sk/' + encodeURIComponent(row.repo) + '">'
+      + escapeHtml(row.repo) + "</a></td>"
+      + "<td><code>" + escapeHtml(row.version) + "</code></td>"
+      + "<td>" + renderGhAction(row.gh_action) + "</td>"
+      + "<td>" + renderPullRequests(row) + "</td></tr>";
   }).join("");
-  dashboard.innerHTML = "<table><thead><tr><th>Repository</th><th>obelisk version</th>"
-    + "<th>Action</th><th>GH Action</th><th>PR</th></tr></thead><tbody>"
+  dashboard.innerHTML = '<table><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th>'
+    + "<th>Repository</th><th>obelisk version</th>"
+    + "<th>GH Action</th><th>PRs</th></tr></thead><tbody>"
     + rows + "</tbody></table>";
 }
 
-// Navigating away (e.g. following the Merge or bump link)
+// Navigating away (e.g. following the Merge link or submitting the bump form)
 // aborts the in-flight /api/status fetch, which would otherwise flash a bogus
 // "Failed to refresh" error before the next page loads.
 let navigatingAway = false;

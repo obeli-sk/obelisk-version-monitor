@@ -7,11 +7,13 @@ pinned by public repositories in the
 The dashboard can:
 
 - show the version from each repository's `dev-deps.txt`;
-- dispatch its `sync-flake-lock.yml` GitHub Actions workflow;
-- link the Obelisk activity and GitHub Actions run;
-- find the resulting ``Sync `flake.lock` from upstream`` pull request;
-- display pull request checks; and
+- batch-dispatch `sync-flake-lock.yml` over selected repositories (checkboxes plus one button);
+- link the latest `sync-flake-lock.yml` GitHub Actions run per repository;
+- list every open ``Sync `flake.lock` from upstream`` pull request with its checks; and
 - merge a passing pull request through an audited Obelisk activity.
+
+Every column is produced by the monitor workflow itself, so page loads read a
+single execution result rather than crawling GitHub or execution history.
 
 ## Dashboard
 
