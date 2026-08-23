@@ -3,10 +3,6 @@ GH_TOKEN = { env = "GH_TOKEN" }
 OBELISK__API__TOKEN = { env = "OBELISK__API__TOKEN" }
 
 [[outbound_http.allowed_host]]
-pattern = "https://api.github.com"
-methods = ["GET"]
-
-[[outbound_http.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]
 secrets = ["GH_TOKEN"]

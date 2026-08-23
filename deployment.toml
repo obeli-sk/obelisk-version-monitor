@@ -4,10 +4,9 @@
 
 [[activity_js]]
 name = "list_repos"
-location = "${DEPLOYMENT_DIR}/activity/list_repos.js"
+location = "activity/list_repos.js"
 ffqn = "obeli-sk:version-monitor/repos.list-repos"
 return_type = "result<list<string>, string>"
-max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
@@ -17,15 +16,13 @@ replace_in = ["headers"]
 
 [[activity_js]]
 name = "fetch_dev_deps"
-location = "${DEPLOYMENT_DIR}/activity/fetch_dev_deps.js"
+location = "activity/fetch_dev_deps.js"
 ffqn = "obeli-sk:version-monitor/repos.fetch-dev-deps"
 params = [
   { name = "repo", type = "string" },
 ]
 return_type = "result<string, variant { permanent-not-found, transient-error(string), execution-failed }>"
-max_retries = 0
 exec.lock_expiry.seconds = 30
-exec.instance_limiter = 1
 [[activity_js.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]
@@ -34,13 +31,12 @@ replace_in = ["headers"]
 
 [[activity_js]]
 name = "fetch_pull_requests"
-location = "${DEPLOYMENT_DIR}/activity/fetch_pull_requests.js"
+location = "activity/fetch_pull_requests.js"
 ffqn = "obeli-sk:version-monitor/repos.fetch-pull-requests"
 params = [
   { name = "repos", type = "list<string>" },
 ]
 return_type = "result<string, string>"
-max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
@@ -50,13 +46,12 @@ replace_in = ["headers"]
 
 [[activity_js]]
 name = "run_sync_flake_lock"
-location = "${DEPLOYMENT_DIR}/activity/run_sync_flake_lock.js"
+location = "activity/run_sync_flake_lock.js"
 ffqn = "obeli-sk:version-monitor/github.run-sync-flake-lock"
 params = [
   { name = "repo", type = "string" },
 ]
 return_type = "result<string, string>"
-max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
@@ -66,7 +61,7 @@ replace_in = ["headers"]
 
 [[activity_js]]
 name = "merge_pull_request"
-location = "${DEPLOYMENT_DIR}/activity/merge_pull_request.js"
+location = "activity/merge_pull_request.js"
 ffqn = "obeli-sk:version-monitor/github.merge-pull-request"
 params = [
   { name = "repo", type = "string" },
@@ -74,7 +69,6 @@ params = [
   { name = "head-sha", type = "string" },
 ]
 return_type = "result<string, string>"
-max_retries = 0
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
@@ -84,10 +78,9 @@ replace_in = ["headers"]
 
 [[activity_js]]
 name = "retire_repo_monitors"
-location = "${DEPLOYMENT_DIR}/activity/retire_repo_monitors.js"
+location = "activity/retire_repo_monitors.js"
 ffqn = "obeli-sk:version-monitor/repos.retire-repo-monitors"
 return_type = "result<u32, string>"
-max_retries = 0
 exec.lock_expiry.seconds = 30
 env_vars = [
   { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },
@@ -100,21 +93,23 @@ replace_in = ["headers"]
 
 [[workflow_js]]
 name = "monitor"
-location = "${DEPLOYMENT_DIR}/workflow/monitor.js"
+location = "workflow/monitor.js"
 ffqn = "obeli-sk:version-monitor/monitor.run"
 return_type = "result<list<record { repo: string, version: string, pull-request: option<record { number: u64, html-url: string, state: string, checks-state: option<string>, head-sha: option<string> }> }>, string>"
 
 [[webhook_endpoint_js]]
 name = "show"
-location = "${DEPLOYMENT_DIR}/webhook/show.js"
+location = "webhook/show.js"
 routes = [
   { methods = ["GET"], route = "/" },
   { methods = ["GET"], route = "/api/status" },
+  { methods = ["GET"], route = "/refresh" },
   { methods = ["GET"], route = "/bump/:repo" },
   { methods = ["GET"], route = "/merge/:repo/:number" },
 ]
 env_vars = [
   { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },
+  { key = "WEBUI_BASE", value = "${WEBUI_BASE:-http://localhost:8080}" },
 ]
 [[webhook_endpoint_js.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"

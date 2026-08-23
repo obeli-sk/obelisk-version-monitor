@@ -16,6 +16,9 @@ export default async function handle(request) {
     if (url.pathname.startsWith("/merge/")) {
         return runMerge(request, url.pathname.substring("/merge/".length));
     }
+    if (url.pathname === "/refresh") {
+        return runRefresh();
+    }
     if (url.pathname === "/api/status") {
         try {
             return jsonResponse(await collectDashboardStatus());
@@ -252,6 +255,19 @@ function formatResultKind(resultKind) {
     return resultKind ? JSON.stringify(resultKind) : "unknown";
 }
 
+function runRefresh() {
+    const execId = obelisk.executionIdGenerate();
+    try {
+        obelisk.schedule(execId, WORKFLOW_FFQN, []);
+    } catch (e) {
+        return errorPage(502, `Failed to schedule refresh: ${String(e)}`);
+    }
+    return new Response(null, {
+        status: 303,
+        headers: { location: "/?refreshed=1" },
+    });
+}
+
 function runBump(encodedRepo) {
     let repo;
     try {
@@ -331,6 +347,7 @@ async function runMerge(request, path) {
 }
 
 function dashboardPage() {
+    const webuiBase = process.env["WEBUI_BASE"] || "http://localhost:8080";
     const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -349,6 +366,7 @@ function dashboardPage() {
 </head>
 <body>
 <h1>obeli-sk version monitor</h1>
+<p><a href="/refresh">Refresh all</a> (runs the monitor workflow now)</p>
 <div id="notice"></div>
 <div id="meta"><p>Loading...</p></div>
 <div id="dashboard"></div>
@@ -366,7 +384,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-const WEBUI_BASE = "http://localhost:8080";
+const WEBUI_BASE = ${JSON.stringify(webuiBase)};
 
 function executionLink(id) {
   return '<a href="' + WEBUI_BASE + "/execution/" + encodeURIComponent(id)
@@ -377,7 +395,9 @@ function renderNotice() {
   const params = new URLSearchParams(location.search);
   const submitted = params.get("submitted");
   const mergeSubmitted = params.get("merge_submitted");
-  if (submitted) {
+  if (params.get("refreshed")) {
+    notice.innerHTML = '<p class="in-progress">Scheduled a monitor refresh.</p>';
+  } else if (submitted) {
     notice.innerHTML = '<p class="in-progress">Scheduled sync-flake-lock for <code>'
       + escapeHtml(submitted) + "</code>.</p>";
   } else if (mergeSubmitted) {
