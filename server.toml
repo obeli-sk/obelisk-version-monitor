@@ -2,6 +2,9 @@
 GH_TOKEN = { env = "GH_TOKEN" }
 OBELISK__API__TOKEN = { env = "OBELISK__API__TOKEN" }
 
+[public_env]
+allowed = ["OBELISK_API_URL", "WEBUI_BASE"]
+
 [[outbound_http.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]

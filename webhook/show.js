@@ -5,6 +5,9 @@
 // maps its rows straight through, so page loads no longer crawl execution
 // history. POST `/bump` schedules a batch `bump.run` over the selected repos and
 // GET `/merge/:repo/:number` schedules an audited merge.
+import * as obelisk from "obelisk:webhook@1.0.0";
+import * as dynamic from "obelisk:webhook-dynamic@1.0.0";
+
 const WORKFLOW_FFQN = "obeli-sk:version-monitor/monitor.run";
 const BUMP_WORKFLOW_FFQN = "obeli-sk:version-monitor/bump.run";
 const MERGE_FFQN = "obeli-sk:version-monitor/github.merge-pull-request";
@@ -165,7 +168,7 @@ function githubHeaders() {
 function runRefresh() {
     const execId = obelisk.executionIdGenerate();
     try {
-        obelisk.schedule(execId, WORKFLOW_FFQN, []);
+        dynamic.schedule(execId, WORKFLOW_FFQN, []);
     } catch (e) {
         return errorPage(502, `Failed to schedule refresh: ${String(e)}`);
     }
@@ -194,7 +197,7 @@ async function runBump(request) {
 
     const execId = obelisk.executionIdGenerate();
     try {
-        obelisk.schedule(execId, BUMP_WORKFLOW_FFQN, [repos]);
+        dynamic.schedule(execId, BUMP_WORKFLOW_FFQN, [repos]);
     } catch (e) {
         return errorPage(502, `Failed to schedule sync-flake-lock: ${String(e)}`);
     }
@@ -264,7 +267,7 @@ async function runMerge(request, path) {
 
     const execId = obelisk.executionIdGenerate();
     try {
-        obelisk.schedule(execId, MERGE_FFQN, [repo, number, requestedHead]);
+        dynamic.schedule(execId, MERGE_FFQN, [repo, number, requestedHead]);
     } catch (e) {
         return errorPage(502, `Failed to schedule PR merge for ${repo}: ${String(e)}`);
     }

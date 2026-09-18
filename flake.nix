@@ -4,7 +4,7 @@
     flake-utils.url = "github:numtide/flake-utils";
 
     obelisk = {
-      url = "github:obeli-sk/obelisk/latest";
+      url = "github:obeli-sk/obelisk/latest-rc";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";
@@ -26,6 +26,7 @@
             gh
             just
             jq
+            yq-go # for scripts/sync-branch-protection.sh
           ];
         };
         devShells.screenshots = pkgs.mkShell {
