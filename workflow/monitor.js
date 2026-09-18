@@ -1,6 +1,7 @@
 import { listRepos, fetchPullRequests, retireRepoMonitors } from "obeli-sk:version-monitor/repos";
 import { fetchGhActions } from "obeli-sk:version-monitor/github";
 import { fetchDevDepsSubmit, fetchDevDepsAwaitNext } from "obeli-sk:version-monitor-obelisk-ext/repos";
+import * as obelisk from "obelisk:workflow@1.0.0";
 
 // obeli-sk:version-monitor/monitor.run:
 //   func() -> result<list<record {

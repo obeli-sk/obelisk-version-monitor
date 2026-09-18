@@ -1,4 +1,5 @@
 import { runSyncFlakeLockSubmit, runSyncFlakeLockAwaitNext } from "obeli-sk:version-monitor-obelisk-ext/github";
+import * as obelisk from "obelisk:workflow@1.0.0";
 
 // obeli-sk:version-monitor/bump.run:
 //   func(repos: list<string>) -> result<list<record { repo: string, result: string }>, string>
