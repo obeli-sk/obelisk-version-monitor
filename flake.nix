@@ -26,6 +26,7 @@
             gh
             just
             jq
+            yq-go # for scripts/sync-branch-protection.sh
           ];
         };
         devShells.screenshots = pkgs.mkShell {
