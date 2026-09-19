@@ -37,9 +37,9 @@ export default async function handle(request) {
 async function fetchObelisk(urlSuffix) {
     const apiBase = process.env["OBELISK_API_URL"] || "http://127.0.0.1:5005";
     const url = `${apiBase}${urlSuffix}`;
-    const token = process.env['OBELISK__API__TOKEN'];
+    const token = process.env['OBELISK_API_TOKEN'];
     if (!token) {
-        throw new Error("OBELISK__API__TOKEN is required");
+        throw new Error("OBELISK_API_TOKEN is required");
     }
     const headers = {
         "accept": "application/json",

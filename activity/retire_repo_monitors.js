@@ -43,9 +43,9 @@ async function retire(execution) {
 
 async function fetchObelisk(path, options = {}) {
     const apiBase = process.env["OBELISK_API_URL"] || "http://127.0.0.1:5005";
-    const token = process.env["OBELISK__API__TOKEN"];
+    const token = process.env["OBELISK_API_TOKEN"];
     if (!token) {
-        throw "OBELISK__API__TOKEN secret is unavailable";
+        throw "OBELISK_API_TOKEN secret is unavailable";
     }
     return await fetch(`${apiBase}${path}`, {
         ...options,

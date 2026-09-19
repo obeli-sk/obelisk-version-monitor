@@ -52,7 +52,7 @@ obelisk deployment verify \
 
 Run it
 ```sh
-export OBELISK__API__TOKEN=$(obelisk generate token)
+export OBELISK_API_TOKEN=$(obelisk generate token)
 obelisk server run --server-config server.toml --deployment deployment.toml
 ```
 
