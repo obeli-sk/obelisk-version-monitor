@@ -1,6 +1,6 @@
 [secrets]
 GH_TOKEN = { env = "GH_TOKEN" }
-OBELISK__API__TOKEN = { env = "OBELISK__API__TOKEN" }
+OBELISK_API_TOKEN = { env = "OBELISK_API_TOKEN" }
 
 [public_env]
 allowed = ["OBELISK_API_URL", "WEBUI_BASE"]
@@ -14,7 +14,7 @@ replace_in = ["headers"]
 [[outbound_http.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
 methods = ["GET", "PUT"]
-secrets = ["OBELISK__API__TOKEN"]
+secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]

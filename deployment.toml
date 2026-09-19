@@ -103,7 +103,7 @@ env_vars = [
 [[activity_js.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
 methods = ["GET", "PUT"]
-secrets = ["OBELISK__API__TOKEN"]
+secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 
 [[workflow_js]]
@@ -138,7 +138,7 @@ env_vars = [
 [[webhook_endpoint_js.allowed_host]]
 pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
 methods = ["GET"]
-secrets = ["OBELISK__API__TOKEN"]
+secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 [[webhook_endpoint_js.allowed_host]]
 pattern = "https://api.github.com"
