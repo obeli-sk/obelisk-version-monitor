@@ -1,4 +1,4 @@
 use flake .
 
-export GH_TOKEN=$(gh auth token)
-export OBELISK__API__TOKEN=$(obelisk generate token --json | jq -r .token)
+export MONITOR_GITHUB_TOKEN=$(gh auth token)
+export OBELISK_API_TOKEN=$(obelisk generate token --json | jq -r .token)

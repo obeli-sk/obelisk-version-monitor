@@ -45,9 +45,9 @@ async function fetchLatestSyncRun(repo, headers) {
 // The real token replaces this placeholder in the outgoing Authorization header
 // via the `replace_in = ["headers"]` secret binding.
 function githubHeaders() {
-    const token = process.env["GH_TOKEN"];
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
     if (!token) {
-        throw "GH_TOKEN secret is unavailable";
+        throw "MONITOR_GITHUB_TOKEN secret is unavailable";
     }
     return {
         "accept": "application/vnd.github+json",

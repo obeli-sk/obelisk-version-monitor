@@ -94,9 +94,9 @@ function pullRequestForJson(pull) {
 // `replace_in = ["headers"]` secret binding; `process.env` only carries a
 // per-run placeholder.
 function githubHeaders() {
-    const token = process.env["GH_TOKEN"];
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
     if (!token) {
-        throw "GH_TOKEN secret is unavailable";
+        throw "MONITOR_GITHUB_TOKEN secret is unavailable";
     }
     const headers = {
         "accept": "application/vnd.github+json",

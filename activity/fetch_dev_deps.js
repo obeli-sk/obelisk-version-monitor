@@ -17,9 +17,9 @@
 // Throwing a snake_case string selects a no-payload variant case; throwing
 // `{ case_name: payload }` selects a case with payload.
 export default async function fetch_dev_deps(repo) {
-    const token = process.env["GH_TOKEN"];
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
     if (!token) {
-        throw { transient_error: "GH_TOKEN secret is unavailable" };
+        throw { transient_error: "MONITOR_GITHUB_TOKEN secret is unavailable" };
     }
     const headers = {
         authorization: `Bearer ${token}`,

@@ -1,14 +1,17 @@
+app_name = "obelisk-version-monitor"
+
 [secrets]
-GH_TOKEN = { env = "GH_TOKEN" }
-OBELISK_API_TOKEN = { env = "OBELISK_API_TOKEN" }
+MONITOR_GITHUB_TOKEN = {}
+OBELISK_API_TOKEN = {}
 
 [public_env]
-allowed = ["OBELISK_API_URL", "WEBUI_BASE"]
+OBELISK_API_URL = { optional = true }
+WEBUI_BASE = { optional = true }
 
 [[outbound_http.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
@@ -20,5 +23,5 @@ replace_in = ["headers"]
 [[outbound_http.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET", "POST", "PUT"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]

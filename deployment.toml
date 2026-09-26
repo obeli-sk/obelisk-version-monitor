@@ -11,7 +11,7 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
@@ -26,7 +26,7 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://raw.githubusercontent.com"
 methods = ["GET"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
@@ -41,7 +41,7 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
@@ -56,7 +56,7 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
@@ -71,7 +71,7 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET", "POST"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
@@ -88,7 +88,7 @@ exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["PUT"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[activity_js]]
@@ -143,7 +143,7 @@ replace_in = ["headers"]
 [[webhook_endpoint_js.allowed_host]]
 pattern = "https://api.github.com"
 methods = ["GET"]
-secrets = ["GH_TOKEN"]
+secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[cron]]
