@@ -38,22 +38,23 @@ Set a GitHub token with permission to dispatch workflows and merge pull
 requests:
 
 ```sh
-export GH_TOKEN="$(gh auth token)"
+export MONITOR_GITHUB_TOKEN="$(gh auth token)"
 ```
 
 Verify the deployment:
 
 ```sh
 obelisk deployment verify \
-  --server-config server.toml \
+  --app-config app.toml \
   --deployment deployment.toml \
   --allow-unavailable-runtime-config
 ```
 
-Run it
+Run it:
+
 ```sh
 export OBELISK_API_TOKEN=$(obelisk generate token)
-obelisk server run --server-config server.toml --deployment deployment.toml
+obelisk server run --app-config app.toml --deployment deployment.toml
 ```
 
 With the default server configuration, the dashboard is available at
