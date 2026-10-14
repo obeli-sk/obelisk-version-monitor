@@ -44,7 +44,7 @@ export MONITOR_GITHUB_TOKEN="$(gh auth token)"
 Verify the deployment:
 
 ```sh
-obelisk deployment verify \
+obelisk server verify --skip-db \
   --app-config app.toml \
   --deployment deployment.toml \
   --allow-unavailable-runtime-config
