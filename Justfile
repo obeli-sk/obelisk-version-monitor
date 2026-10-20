@@ -1,2 +1,2 @@
 serve:
-  obelisk server run --app-config app.toml --deployment deployment.toml
+  obelisk server run --deployment deployment.toml

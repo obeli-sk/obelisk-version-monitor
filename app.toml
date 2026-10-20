@@ -2,7 +2,7 @@ app_name = "obelisk-version-monitor"
 
 [secrets]
 MONITOR_GITHUB_TOKEN = {}
-OBELISK_API_TOKEN = {}
+OBELISK_API_TOKEN = { type = "internal" }
 
 [public_env]
 OBELISK_API_URL = { optional = true }

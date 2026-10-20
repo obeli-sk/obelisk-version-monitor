@@ -52,8 +52,11 @@ obelisk server verify --skip-db \
 
 Run it:
 
+The dashboard and the retirement activity call this server's API with its
+startup token, supplied by the internal `OBELISK_API_TOKEN` secret, so no API
+token needs to be exported.
+
 ```sh
-export OBELISK_API_TOKEN=$(obelisk generate token)
 obelisk server run --app-config app.toml --deployment deployment.toml
 ```
 
