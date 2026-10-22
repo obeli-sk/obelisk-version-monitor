@@ -5,23 +5,47 @@ MONITOR_GITHUB_TOKEN = {}
 OBELISK_API_TOKEN = { type = "internal" }
 
 [public_env]
-OBELISK_API_URL = { optional = true }
-WEBUI_BASE = { optional = true }
+OBELISK_API_URL = { type = "internal", source = "api-url" }
+OBELISK_WEBUI_URL = { type = "internal", source = "webui-url" }
 
 [[outbound_http.allowed_host]]
-pattern = "https://raw.githubusercontent.com"
+url_prefix = "https://raw.githubusercontent.com/obeli-sk"
 methods = ["GET"]
+url_regex_suffix = "/[^/]+/[^/]+/dev-deps\\.txt$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
-pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
-methods = ["GET", "PUT"]
+url_prefix = "${OBELISK_API_URL}"
+methods = ["GET"]
+url_regex_suffix = "/v1/executions(/[^/]+)?$"
 secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
-pattern = "https://api.github.com"
-methods = ["GET", "POST", "PUT"]
+url_prefix = "${OBELISK_API_URL}"
+methods = ["PUT"]
+url_regex_suffix = "/v1/executions/[^/]+/(cancel|pause)$"
+secrets = ["OBELISK_API_TOKEN"]
+replace_in = ["headers"]
+
+[[outbound_http.allowed_host]]
+url_prefix = "https://api.github.com"
+methods = ["GET"]
+url_regex_suffix = "/orgs/obeli-sk/repos$|/search/issues$|/repos/obeli-sk/[^/]+(/.*)?$"
+secrets = ["MONITOR_GITHUB_TOKEN"]
+replace_in = ["headers"]
+
+[[outbound_http.allowed_host]]
+url_prefix = "https://api.github.com/repos/obeli-sk"
+methods = ["POST"]
+url_regex_suffix = "/[^/]+/actions/workflows/sync-flake-lock\\.yml/dispatches$"
+secrets = ["MONITOR_GITHUB_TOKEN"]
+replace_in = ["headers"]
+
+[[outbound_http.allowed_host]]
+url_prefix = "https://api.github.com/repos/obeli-sk"
+methods = ["PUT"]
+url_regex_suffix = "/[^/]+/pulls/[0-9]+/merge$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
