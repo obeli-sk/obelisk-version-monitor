@@ -53,8 +53,11 @@ obelisk server verify --skip-db \
 Run it:
 
 The dashboard and the retirement activity call this server's API with its
-startup token, supplied by the internal `OBELISK_API_TOKEN` secret, so no API
-token needs to be exported.
+startup token, supplied by the internal `OBELISK_API_TOKEN` secret. The server
+also supplies its own API and Web UI URLs through the internal
+`OBELISK_API_URL` and `OBELISK_WEBUI_URL` public environment entries, so no
+token or URL needs to be exported. Keep the Web UI listener enabled, and set
+`webui.public_url` in `server.toml` when it is reached through a proxy.
 
 ```sh
 obelisk server run --app-config app.toml --deployment deployment.toml

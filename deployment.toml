@@ -9,8 +9,9 @@ ffqn = "obeli-sk:version-monitor/repos.list-repos"
 return_type = "result<list<string>, string>"
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
-pattern = "https://api.github.com"
+url_prefix = "https://api.github.com/orgs/obeli-sk/repos"
 methods = ["GET"]
+url_regex_suffix = "$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
@@ -24,8 +25,9 @@ params = [
 return_type = "result<string, variant { permanent-not-found, transient-error(string), execution-failed }>"
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
-pattern = "https://raw.githubusercontent.com"
+url_prefix = "https://raw.githubusercontent.com/obeli-sk"
 methods = ["GET"]
+url_regex_suffix = "/[^/]+/(main|master)/dev-deps\\.txt$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
@@ -39,8 +41,15 @@ params = [
 return_type = "result<string, string>"
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
-pattern = "https://api.github.com"
+url_prefix = "https://api.github.com/search/issues"
 methods = ["GET"]
+url_regex_suffix = "$"
+secrets = ["MONITOR_GITHUB_TOKEN"]
+replace_in = ["headers"]
+[[activity_js.allowed_host]]
+url_prefix = "https://api.github.com/repos/obeli-sk"
+methods = ["GET"]
+url_regex_suffix = "/[^/]+/(pulls/[0-9]+|commits/[^/]+/check-runs)$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
@@ -54,8 +63,9 @@ params = [
 return_type = "result<string, string>"
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
-pattern = "https://api.github.com"
+url_prefix = "https://api.github.com/repos/obeli-sk"
 methods = ["GET"]
+url_regex_suffix = "/[^/]+/actions/workflows/sync-flake-lock\\.yml/runs$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
@@ -69,8 +79,15 @@ params = [
 return_type = "result<string, string>"
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
-pattern = "https://api.github.com"
-methods = ["GET", "POST"]
+url_prefix = "https://api.github.com/repos/obeli-sk"
+methods = ["GET"]
+url_regex_suffix = "/[^/]+$"
+secrets = ["MONITOR_GITHUB_TOKEN"]
+replace_in = ["headers"]
+[[activity_js.allowed_host]]
+url_prefix = "https://api.github.com/repos/obeli-sk"
+methods = ["POST"]
+url_regex_suffix = "/[^/]+/actions/workflows/sync-flake-lock\\.yml/dispatches$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
@@ -86,8 +103,9 @@ params = [
 return_type = "result<string, string>"
 exec.lock_expiry.seconds = 30
 [[activity_js.allowed_host]]
-pattern = "https://api.github.com"
+url_prefix = "https://api.github.com/repos/obeli-sk"
 methods = ["PUT"]
+url_regex_suffix = "/[^/]+/pulls/[0-9]+/merge$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 
@@ -97,12 +115,17 @@ location = "activity/retire_repo_monitors.js"
 ffqn = "obeli-sk:version-monitor/repos.retire-repo-monitors"
 return_type = "result<u32, string>"
 exec.lock_expiry.seconds = 30
-env_vars = [
-  { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },
-]
+env_vars = ["OBELISK_API_URL"]
 [[activity_js.allowed_host]]
-pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
-methods = ["GET", "PUT"]
+url_prefix = "${OBELISK_API_URL}"
+methods = ["GET"]
+url_regex_suffix = "/v1/executions$"
+secrets = ["OBELISK_API_TOKEN"]
+replace_in = ["headers"]
+[[activity_js.allowed_host]]
+url_prefix = "${OBELISK_API_URL}"
+methods = ["PUT"]
+url_regex_suffix = "/v1/executions/[^/]+/(cancel|pause)$"
 secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 
@@ -131,18 +154,17 @@ routes = [
   { methods = ["POST"], route = "/bump" },
   { methods = ["GET"], route = "/merge/:repo/:number" },
 ]
-env_vars = [
-  { key = "OBELISK_API_URL", value = "${OBELISK_API_URL:-http://127.0.0.1:5005}" },
-  { key = "WEBUI_BASE", value = "${WEBUI_BASE:-http://localhost:8080}" },
-]
+env_vars = ["OBELISK_API_URL", "OBELISK_WEBUI_URL"]
 [[webhook_endpoint_js.allowed_host]]
-pattern = "${OBELISK_API_URL:-http://127.0.0.1:5005}"
+url_prefix = "${OBELISK_API_URL}"
 methods = ["GET"]
+url_regex_suffix = "/v1/executions(/[^/]+)?$"
 secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 [[webhook_endpoint_js.allowed_host]]
-pattern = "https://api.github.com"
+url_prefix = "https://api.github.com/repos/obeli-sk"
 methods = ["GET"]
+url_regex_suffix = "/[^/]+/(pulls/[0-9]+|commits/[^/]+/check-runs)$"
 secrets = ["MONITOR_GITHUB_TOKEN"]
 replace_in = ["headers"]
 

@@ -35,7 +35,7 @@ export default async function handle(request) {
 }
 
 async function fetchObelisk(urlSuffix) {
-    const apiBase = process.env["OBELISK_API_URL"] || "http://127.0.0.1:5005";
+    const apiBase = process.env["OBELISK_API_URL"];
     const url = `${apiBase}${urlSuffix}`;
     const token = process.env['OBELISK_API_TOKEN'];
     if (!token) {
@@ -278,7 +278,7 @@ async function runMerge(request, path) {
 }
 
 function dashboardPage() {
-    const webuiBase = process.env["WEBUI_BASE"] || "http://localhost:8080";
+    const webuiBase = process.env["OBELISK_WEBUI_URL"];
     const html = `<!doctype html>
 <html lang="en">
 <head>
@@ -318,10 +318,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-const WEBUI_BASE = ${JSON.stringify(webuiBase)};
+const WEBUI_URL = ${JSON.stringify(webuiBase)};
 
 function executionLink(id) {
-  return '<a href="' + WEBUI_BASE + "/execution/" + encodeURIComponent(id)
+  return '<a href="' + WEBUI_URL + "/execution/" + encodeURIComponent(id)
     + '" target="_blank" rel="noopener"><code>' + escapeHtml(id) + "</code></a>";
 }
 
