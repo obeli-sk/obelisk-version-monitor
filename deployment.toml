@@ -172,3 +172,4 @@ replace_in = ["headers"]
 name = "monitor_run"
 ffqn = "obeli-sk:version-monitor/monitor.run"
 schedule = "*/5 * * * *" # every five minutes
+overlap = "skip"
