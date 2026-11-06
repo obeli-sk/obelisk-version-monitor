@@ -60,6 +60,8 @@ jobs:
             extra-trusted-public-keys = obeli-sk.cachix.org-1:31iM9GWSEhAXvvuTWQ7CvAcwvgRzsuJ9yJghywSd3Jw=
 
       - name: Verify deployment.toml
+        env:
+          OBELISK__HTTP_SERVER__INTERNAL__API_AUTH: "true"
         run: |
           nix develop --command obelisk server verify --skip-db \
             --app-config app.toml \

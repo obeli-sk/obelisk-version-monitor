@@ -4,14 +4,14 @@
 //   nix develop .#screenshots -c \
 //     node scripts/screenshot-dashboard.js [url] [output.png]
 //
-// Defaults: http://localhost:9090/  ->  docs/dashboard.png
+// Defaults: http://localhost:9091/  ->  docs/dashboard.png
 
 const fs = require('node:fs');
 const path = require('node:path');
 
 const { chromium } = require('playwright-core');
 
-const url = process.argv[2] || 'http://localhost:9090/';
+const url = process.argv[2] || 'http://localhost:9091/';
 const output = process.argv[3] || path.join(__dirname, '..', 'docs', 'dashboard.png');
 
 (async () => {

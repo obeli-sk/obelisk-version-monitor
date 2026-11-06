@@ -44,7 +44,7 @@ export MONITOR_GITHUB_TOKEN="$(gh auth token)"
 Verify the deployment:
 
 ```sh
-obelisk server verify --skip-db \
+OBELISK__HTTP_SERVER__INTERNAL__API_AUTH=true obelisk server verify --skip-db \
   --app-config app.toml \
   --deployment deployment.toml \
   --allow-unavailable-runtime-config
@@ -60,8 +60,13 @@ token or URL needs to be exported. Keep the Web UI listener enabled, and set
 `webui.public_url` in `server.toml` when it is reached through a proxy.
 
 ```sh
-obelisk server run --app-config app.toml --deployment deployment.toml
+obelisk server run --dev --app-config app.toml --deployment deployment.toml
 ```
 
 With the default server configuration, the dashboard is available at
-<http://127.0.0.1:9090/>.
+<http://127.0.0.1:9091/>.
+The dashboard uses `internal` because it can dispatch workflows and merge pull
+requests. Local `--dev` permits access without credentials; keep the listener
+on localhost. Hosted instances use platform authentication at
+`https://internal--<app>.<domain>` and leave `external` closed. Choose an app
+name of at most 20 characters before deploying to Obelisk Cloud.
