@@ -147,6 +147,7 @@ return_type = "result<list<record { repo: string, result: string }>, string>"
 [[webhook_endpoint_js]]
 name = "show"
 location = "webhook/show.js"
+http_server = "internal"
 routes = [
   { methods = ["GET"], route = "/" },
   { methods = ["GET"], route = "/api/status" },
