@@ -21,7 +21,7 @@ export default async function fetch_gh_actions(repos) {
 
 async function fetchLatestSyncRun(repo, headers) {
     try {
-        const url = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/actions/workflows/sync-flake-lock.yml/runs?per_page=1`;
+        const url = `${githubApi()}/repos/obeli-sk/${encodeURIComponent(repo)}/actions/workflows/sync-flake-lock.yml/runs?per_page=1`;
         const resp = await fetch(url, { headers });
         if (resp.status === 404) {
             return null;
@@ -42,17 +42,20 @@ async function fetchLatestSyncRun(repo, headers) {
     }
 }
 
-// The real token replaces this placeholder in the outgoing Authorization header
-// via the `replace_in = ["headers"]` secret binding.
+// In the cloud GITHUB_API_URL is the GitHub integration proxy, which authenticates requests itself.
+function githubApi() {
+    return process.env["GITHUB_API_URL"].replace(/\/+$/, "");
+}
+
 function githubHeaders() {
-    const token = process.env["MONITOR_GITHUB_TOKEN"];
-    if (!token) {
-        throw "MONITOR_GITHUB_TOKEN secret is unavailable";
-    }
-    return {
+    const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
-        authorization: `Bearer ${token}`,
     };
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
+    if (token) {
+        headers.authorization = `Bearer ${token}`;
+    }
+    return headers;
 }

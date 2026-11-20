@@ -1,19 +1,18 @@
 app_name = "obelisk-version-monitor"
 
+# In the cloud, GitHub requests go through the account's GitHub integration proxy,
+# which authenticates them; locally they go to api.github.com with MONITOR_GITHUB_TOKEN.
+[cloud.integrations]
+github = { type = "github", env = "GITHUB_API_URL" }
+
 [secrets]
-MONITOR_GITHUB_TOKEN = {}
+MONITOR_GITHUB_TOKEN = { optional = true }
 OBELISK_API_TOKEN = { type = "internal" }
 
 [public_env]
+GITHUB_API_URL = { optional = true }
 OBELISK_API_URL = { type = "internal", source = "api-url" }
 OBELISK_WEBUI_URL = { type = "internal", source = "webui-url" }
-
-[[outbound_http.allowed_host]]
-url_prefix = "https://raw.githubusercontent.com/obeli-sk"
-methods = ["GET"]
-url_regex_suffix = "/[^/]+/[^/]+/dev-deps\\.txt$"
-secrets = ["MONITOR_GITHUB_TOKEN"]
-replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
 url_prefix = "${OBELISK_API_URL}"
@@ -30,22 +29,22 @@ secrets = ["OBELISK_API_TOKEN"]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
-url_prefix = "https://api.github.com"
+url_prefix = "${GITHUB_API_URL:-https://api.github.com}"
 methods = ["GET"]
 url_regex_suffix = "/orgs/obeli-sk/repos$|/search/issues$|/repos/obeli-sk/[^/]+(/.*)?$"
-secrets = ["MONITOR_GITHUB_TOKEN"]
+secrets = [{ name = "MONITOR_GITHUB_TOKEN", optional = true }]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
-url_prefix = "https://api.github.com/repos/obeli-sk"
+url_prefix = "${GITHUB_API_URL:-https://api.github.com}/repos/obeli-sk"
 methods = ["POST"]
 url_regex_suffix = "/[^/]+/actions/workflows/sync-flake-lock\\.yml/dispatches$"
-secrets = ["MONITOR_GITHUB_TOKEN"]
+secrets = [{ name = "MONITOR_GITHUB_TOKEN", optional = true }]
 replace_in = ["headers"]
 
 [[outbound_http.allowed_host]]
-url_prefix = "https://api.github.com/repos/obeli-sk"
+url_prefix = "${GITHUB_API_URL:-https://api.github.com}/repos/obeli-sk"
 methods = ["PUT"]
 url_regex_suffix = "/[^/]+/pulls/[0-9]+/merge$"
-secrets = ["MONITOR_GITHUB_TOKEN"]
+secrets = [{ name = "MONITOR_GITHUB_TOKEN", optional = true }]
 replace_in = ["headers"]

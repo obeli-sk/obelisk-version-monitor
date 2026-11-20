@@ -151,17 +151,21 @@ function classifyChecks(checks) {
     return checks.every((check) => passing.has(check.conclusion)) ? "passing" : "erroring";
 }
 
+// In the cloud GITHUB_API_URL is the GitHub integration proxy, which authenticates requests itself.
+function githubApi() {
+    return process.env["GITHUB_API_URL"].replace(/\/+$/, "");
+}
+
 function githubHeaders() {
-    const token = process.env["MONITOR_GITHUB_TOKEN"];
-    if (!token) {
-        throw new Error("MONITOR_GITHUB_TOKEN secret is unavailable");
-    }
     const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
-        authorization: `Bearer ${token}`,
     };
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
+    if (token) {
+        headers.authorization = `Bearer ${token}`;
+    }
     return headers;
 }
 
@@ -245,7 +249,7 @@ async function runMerge(request, path) {
     }
 
     const headers = githubHeaders();
-    const pullUrl = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${number}`;
+    const pullUrl = `${githubApi()}/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${number}`;
     const pullResp = await fetch(pullUrl, { headers });
     if (!pullResp.ok) {
         return errorPage(502, `Failed to fetch PR: HTTP ${pullResp.status}`);
@@ -255,7 +259,7 @@ async function runMerge(request, path) {
         return errorPage(409, "PR is no longer an open, unchanged sync-flake-lock PR");
     }
 
-    const checksUrl = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/commits/${requestedHead}/check-runs?per_page=100`;
+    const checksUrl = `${githubApi()}/repos/obeli-sk/${encodeURIComponent(repo)}/commits/${requestedHead}/check-runs?per_page=100`;
     const checksResp = await fetch(checksUrl, { headers });
     if (!checksResp.ok) {
         return errorPage(502, `Failed to fetch PR checks: HTTP ${checksResp.status}`);
