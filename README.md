@@ -25,6 +25,24 @@ without reloading the page.
 Each row links to the shared monitor execution that produced it. Obelisk
 activities display their execution IDs, while GitHub Actions runs and pull
 requests link to GitHub.
+## Deploying to Obelisk Cloud
+
+```sh
+git clone https://github.com/obeli-sk/obelisk-version-monitor.git
+cd obelisk-version-monitor
+obelisk cloud auth login
+obelisk generate app-name   # picks a unique name and writes it to app.toml
+obelisk cloud app push
+```
+
+GitHub requests go through the cloud's GitHub integration (`[cloud.integrations]`
+in `app.toml`), so no token is needed: they act as the GitHub user who owns the
+app. That user must have access to the `obeli-sk` repositories, and the cloud's
+GitHub App must be installed on `obeli-sk` with permission to read contents,
+checks and pull requests, dispatch Actions workflows, and merge pull requests.
+
+The dashboard is served at `https://internal--<app>.obelisk.works/`, behind
+the platform sign-in. `obelisk cloud app status` prints the endpoints.
 
 ## Development
 
@@ -34,8 +52,8 @@ Enter the development shell:
 nix develop
 ```
 
-Set a GitHub token with permission to dispatch workflows and merge pull
-requests:
+Locally, GitHub requests go to `api.github.com`. Set a GitHub token with
+permission to dispatch workflows and merge pull requests:
 
 ```sh
 export MONITOR_GITHUB_TOKEN="$(gh auth token)"
@@ -67,6 +85,4 @@ With the default server configuration, the dashboard is available at
 <http://127.0.0.1:9091/>.
 The dashboard uses `internal` because it can dispatch workflows and merge pull
 requests. Local `--dev` permits access without credentials; keep the listener
-on localhost. Hosted instances use platform authentication at
-`https://internal--<app>.<domain>` and leave `external` closed. Choose an app
-name of at most 20 characters before deploying to Obelisk Cloud.
+on localhost.

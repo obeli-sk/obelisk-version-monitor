@@ -4,21 +4,11 @@
 // returns a list of repository names. Throws on HTTP error which is converted
 // to the err arm of the result type.
 export default async function list_repos() {
-    const token = process.env["MONITOR_GITHUB_TOKEN"];
-    if (!token) {
-        throw "MONITOR_GITHUB_TOKEN secret is unavailable";
-    }
-    const headers = {
-        "accept": "application/vnd.github+json",
-        "user-agent": "obelisk-version-monitor",
-        "x-github-api-version": "2022-11-28",
-        authorization: `Bearer ${token}`,
-    };
-
+    const headers = githubHeaders();
     const repos = [];
     let page = 1;
     while (true) {
-        const url = `https://api.github.com/orgs/obeli-sk/repos?per_page=100&type=public&page=${page}`;
+        const url = `${githubApi()}/orgs/obeli-sk/repos?per_page=100&type=public&page=${page}`;
         console.info("Fetching", url);
         const resp = await fetch(url, { headers });
         if (!resp.ok) {
@@ -40,4 +30,22 @@ export default async function list_repos() {
     }
     console.info("Found", repos.length, "repos");
     return repos;
+}
+
+// In the cloud GITHUB_API_URL is the GitHub integration proxy, which authenticates requests itself.
+function githubApi() {
+    return process.env["GITHUB_API_URL"].replace(/\/+$/, "");
+}
+
+function githubHeaders() {
+    const headers = {
+        "accept": "application/vnd.github+json",
+        "user-agent": "obelisk-version-monitor",
+        "x-github-api-version": "2022-11-28",
+    };
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
+    if (token) {
+        headers.authorization = `Bearer ${token}`;
+    }
+    return headers;
 }

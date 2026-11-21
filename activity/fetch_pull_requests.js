@@ -14,7 +14,7 @@ export default async function fetch_pull_requests(repos) {
     const headers = githubHeaders();
     const byRepo = new Map(repos.map((repo) => [repo, []]));
     const query = `org:obeli-sk is:pr is:open in:title "${PR_TITLE}"`;
-    const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query)}&per_page=100&sort=created&order=desc`;
+    const url = `${githubApi()}/search/issues?q=${encodeURIComponent(query)}&per_page=100&sort=created&order=desc`;
     const resp = await fetch(url, { headers });
     if (!resp.ok) {
         throw `GitHub PR search failed: HTTP ${resp.status}`;
@@ -43,7 +43,7 @@ export default async function fetch_pull_requests(repos) {
 
 async function fetchPullRequestChecks(repo, pull, headers) {
     try {
-        const pullUrl = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${pull.number}`;
+        const pullUrl = `${githubApi()}/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${pull.number}`;
         const pullResp = await fetch(pullUrl, { headers });
         if (!pullResp.ok) {
             console.warn("Failed to fetch PR:", repo, pull.number, pullResp.status);
@@ -56,7 +56,7 @@ async function fetchPullRequestChecks(repo, pull, headers) {
         }
         pull.head_sha = sha;
 
-        const checksUrl = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/commits/${sha}/check-runs?per_page=100`;
+        const checksUrl = `${githubApi()}/repos/obeli-sk/${encodeURIComponent(repo)}/commits/${sha}/check-runs?per_page=100`;
         const checksResp = await fetch(checksUrl, { headers });
         if (!checksResp.ok) {
             console.warn("Failed to fetch PR checks:", repo, pull.number, checksResp.status);
@@ -90,19 +90,20 @@ function pullRequestForJson(pull) {
     };
 }
 
-// The real token is injected into the outgoing Authorization header by the
-// `replace_in = ["headers"]` secret binding; `process.env` only carries a
-// per-run placeholder.
+// In the cloud GITHUB_API_URL is the GitHub integration proxy, which authenticates requests itself.
+function githubApi() {
+    return process.env["GITHUB_API_URL"].replace(/\/+$/, "");
+}
+
 function githubHeaders() {
-    const token = process.env["MONITOR_GITHUB_TOKEN"];
-    if (!token) {
-        throw "MONITOR_GITHUB_TOKEN secret is unavailable";
-    }
     const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
-        authorization: `Bearer ${token}`,
     };
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
+    if (token) {
+        headers.authorization = `Bearer ${token}`;
+    }
     return headers;
 }

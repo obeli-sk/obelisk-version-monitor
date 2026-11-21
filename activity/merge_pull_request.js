@@ -17,7 +17,7 @@ export default async function merge_pull_request(repo, number, headSha) {
     }
 
     const headers = githubHeaders();
-    const url = `https://api.github.com/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${number}/merge`;
+    const url = `${githubApi()}/repos/obeli-sk/${encodeURIComponent(repo)}/pulls/${number}/merge`;
     const resp = await fetch(url, {
         method: "PUT",
         headers: { ...headers, "content-type": "application/json" },
@@ -36,17 +36,20 @@ export default async function merge_pull_request(repo, number, headSha) {
     throw `failed to merge obeli-sk/${repo}#${number}: HTTP ${resp.status} ${detail}`;
 }
 
-// The real token replaces this placeholder in the outgoing Authorization header
-// via the `replace_in = ["headers"]` secret binding.
+// In the cloud GITHUB_API_URL is the GitHub integration proxy, which authenticates requests itself.
+function githubApi() {
+    return process.env["GITHUB_API_URL"].replace(/\/+$/, "");
+}
+
 function githubHeaders() {
-    const token = process.env["MONITOR_GITHUB_TOKEN"];
-    if (!token) {
-        throw "MONITOR_GITHUB_TOKEN secret is unavailable";
-    }
-    return {
+    const headers = {
         "accept": "application/vnd.github+json",
         "user-agent": "obelisk-version-monitor",
         "x-github-api-version": "2022-11-28",
-        authorization: `Bearer ${token}`,
     };
+    const token = process.env["MONITOR_GITHUB_TOKEN"];
+    if (token) {
+        headers.authorization = `Bearer ${token}`;
+    }
+    return headers;
 }
